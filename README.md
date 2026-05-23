@@ -1,0 +1,34 @@
+# Chain Detective
+
+Chain Detective is a real-time on-chain intelligence dashboard for Alpha pool discovery.
+
+The first MVP intentionally stays tiny:
+
+- watch configured EVM contracts on BSC and Ethereum;
+- stream fresh blocks, matched logs, and lifecycle detections to the browser;
+- show one project radar row and one investigation detail view;
+- keep the architecture ready for Alpha hooks, pool analyzers, and holder tracking.
+
+## Tech Stack
+
+- Web: React + Vite + TypeScript
+- Realtime API: Node.js + Fastify + WebSocket
+- Chain access: viem
+- First chain family: EVM/Solidity contracts
+- Later adapters: Solana/Rust, Move chains
+
+## Run
+
+```bash
+npm install
+npm run dev
+```
+
+Optional live RPC environment:
+
+```bash
+BSC_RPC_URL=https://...
+ETH_RPC_URL=https://...
+```
+
+Without RPC URLs, the server runs in demo mode and streams the seeded Nexus investigation events.

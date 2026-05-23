@@ -14,6 +14,7 @@
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "noEmit": true,
     "types": ["node"]
   },
   "include": ["src/server", "src/shared"]
