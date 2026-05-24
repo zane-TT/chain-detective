@@ -1,10 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Crosshair, Radio, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Crosshair, Languages, Radio, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, DetectorState, LifecycleSignal } from "../shared/types";
 import {
-  defaultLocale,
   getCopy,
   getEventCopy,
   getMechanismCopy,
@@ -12,6 +11,10 @@ import {
   getPoolStatusCopy,
   getSignalCopy,
   getStatusCopy,
+  localeNames,
+  localeStorageKey,
+  locales,
+  resolveLocale,
   type Locale,
 } from "./i18n";
 import "./styles.css";
@@ -33,7 +36,9 @@ const initialState: DetectorState = {
 function App() {
   const [state, setState] = useState<DetectorState>(initialState);
   const [connected, setConnected] = useState(false);
-  const locale = defaultLocale;
+  const [locale, setLocale] = useState<Locale>(() =>
+    resolveLocale(localStorage.getItem(localeStorageKey) ?? navigator.language),
+  );
   const copy = getCopy(locale);
   const project = state.projects[0];
 
@@ -51,6 +56,11 @@ function App() {
 
     return () => socket.close();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(localeStorageKey, locale);
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  }, [locale]);
 
   const criticalEvents = useMemo(
     () => state.events.filter((event) => event.severity !== "info").slice(0, 4),
@@ -76,6 +86,7 @@ function App() {
             <strong>{state.mode === "live" ? copy.liveRpc : copy.demoSeed}</strong>
           </div>
         </div>
+        <LanguageSwitch locale={locale} onChange={setLocale} />
       </section>
 
       <section className="summary-grid">
@@ -199,6 +210,27 @@ function Panel({ title, action, children }: { title: string; action: string; chi
       </header>
       {children}
     </section>
+  );
+}
+
+function LanguageSwitch({ locale, onChange }: { locale: Locale; onChange: (locale: Locale) => void }) {
+  return (
+    <div className="language-switch" aria-label="Language">
+      <Languages size={16} />
+      <div>
+        {locales.map((item) => (
+          <button
+            key={item}
+            type="button"
+            className={item === locale ? "active" : ""}
+            aria-pressed={item === locale}
+            onClick={() => onChange(item)}
+          >
+            {localeNames[item]}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

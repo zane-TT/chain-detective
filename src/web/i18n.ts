@@ -10,6 +10,16 @@ export const localeNames: Record<Locale, string> = {
   zh: "中文",
 };
 
+export const localeStorageKey = "chain-detective-locale";
+
+export function resolveLocale(value: string | null | undefined): Locale {
+  if (!value) return defaultLocale;
+  const normalized = value.toLowerCase();
+  if (normalized.startsWith("zh")) return "zh";
+  if (normalized.startsWith("en")) return "en";
+  return defaultLocale;
+}
+
 const uiCopy = {
   en: {
     tagline: "Realtime Alpha pool intelligence for EVM-first investigations.",
