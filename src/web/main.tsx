@@ -79,14 +79,16 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="connection-card">
-          <Radio size={18} />
-          <div>
-            <span>{connected ? copy.streamConnected : copy.waitingForStream}</span>
-            <strong>{state.mode === "live" ? copy.liveRpc : copy.demoSeed}</strong>
+        <div className="topbar-actions">
+          <div className="connection-card">
+            <Radio size={18} />
+            <div>
+              <span>{connected ? copy.streamConnected : copy.waitingForStream}</span>
+              <strong>{state.mode === "live" ? copy.liveRpc : copy.demoSeed}</strong>
+            </div>
           </div>
+          <LanguageSwitch label={copy.language} locale={locale} onChange={setLocale} />
         </div>
-        <LanguageSwitch locale={locale} onChange={setLocale} />
       </section>
 
       <section className="summary-grid">
@@ -213,9 +215,17 @@ function Panel({ title, action, children }: { title: string; action: string; chi
   );
 }
 
-function LanguageSwitch({ locale, onChange }: { locale: Locale; onChange: (locale: Locale) => void }) {
+function LanguageSwitch({
+  label,
+  locale,
+  onChange,
+}: {
+  label: string;
+  locale: Locale;
+  onChange: (locale: Locale) => void;
+}) {
   return (
-    <div className="language-switch" aria-label="Language">
+    <div className="language-switch" aria-label={label}>
       <Languages size={16} />
       <div>
         {locales.map((item) => (
@@ -268,6 +278,7 @@ function EvidenceList({
 function EventRow({ event, locale, compact = false }: { event: ChainEvent; locale: Locale; compact?: boolean }) {
   const eventCopy = getEventCopy(locale, event);
   const blockLabel = getCopy(locale).block;
+  const localeTag = locale === "zh" ? "zh-CN" : "en-US";
 
   return (
     <article className={`event-row ${event.severity} ${compact ? "compact" : ""}`}>
@@ -279,7 +290,7 @@ function EventRow({ event, locale, compact = false }: { event: ChainEvent; local
         </div>
         {!compact && <p>{eventCopy.detail}</p>}
         <small>
-          {getSignalCopy(locale, event.signal)} / {new Date(event.timestamp).toLocaleTimeString()}
+          {getSignalCopy(locale, event.signal)} / {new Date(event.timestamp).toLocaleTimeString(localeTag)}
           {event.blockNumber ? ` / ${blockLabel} ${event.blockNumber}` : ""}
         </small>
       </div>

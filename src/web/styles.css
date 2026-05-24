@@ -50,6 +50,12 @@ textarea {
   margin-bottom: 24px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .brand-row {
   display: flex;
   align-items: center;
@@ -507,6 +513,11 @@ h1 {
   }
 
   .topbar {
+    flex-direction: column;
+  }
+
+  .topbar-actions {
+    width: 100%;
     flex-direction: column;
   }
 

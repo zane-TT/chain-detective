@@ -58,6 +58,7 @@ const uiCopy = {
     minimumUsefulFeatureBody:
       "The app already separates the realtime detector from the UI. Add RPC URLs and the server polls watched Solidity contracts, streams fresh logs, and keeps the browser updated through WebSocket.",
     block: "block",
+    language: "Language",
   },
   zh: {
     tagline: "面向 EVM 调查的实时 Alpha 池情报台。",
@@ -96,6 +97,7 @@ const uiCopy = {
     minimumUsefulFeatureBody:
       "应用已经把实时检测器和界面拆开。配置 RPC URL 后，服务端会轮询被监控的 Solidity 合约，推送最新日志，并通过 WebSocket 保持浏览器同步。",
     block: "区块",
+    language: "语言",
   },
 } as const;
 
