@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Activity, AlertTriangle, Crosshair, Radio, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, DetectorState, LifecycleSignal } from "../shared/types";
+import { defaultLocale, getCopy, getMechanismCopy, getPoolStatusCopy, getStatusCopy } from "./i18n";
 import "./styles.css";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -22,6 +23,8 @@ const initialState: DetectorState = {
 function App() {
   const [state, setState] = useState<DetectorState>(initialState);
   const [connected, setConnected] = useState(false);
+  const locale = defaultLocale;
+  const copy = getCopy(locale);
   const project = state.projects[0];
 
   useEffect(() => {
@@ -52,35 +55,40 @@ function App() {
             <div className="brand-mark">CD</div>
             <div>
               <h1>Chain Detective</h1>
-              <p>Realtime Alpha pool intelligence for EVM-first investigations.</p>
+              <p>{copy.tagline}</p>
             </div>
           </div>
         </div>
         <div className="connection-card">
           <Radio size={18} />
           <div>
-            <span>{connected ? "Stream connected" : "Waiting for stream"}</span>
-            <strong>{state.mode === "live" ? "Live RPC" : "Demo seed"}</strong>
+            <span>{connected ? copy.streamConnected : copy.waitingForStream}</span>
+            <strong>{state.mode === "live" ? copy.liveRpc : copy.demoSeed}</strong>
           </div>
         </div>
       </section>
 
       <section className="summary-grid">
-        <MetricCard label="Watched chains" value="BSC + ETH" detail="Solidity/EVM first" icon={<Waypoints />} />
-        <MetricCard label="Detector mode" value={state.mode.toUpperCase()} detail={statusCopy(state.status)} icon={<Activity />} />
-        <MetricCard label="Current project" value={project.symbol} detail={project.name} icon={<Crosshair />} />
-        <MetricCard label="Mechanism" value={project.mechanism.type} detail={`${project.mechanism.confidence}% confidence`} icon={<ShieldCheck />} />
+        <MetricCard label={copy.watchedChains} value="BSC + ETH" detail={copy.evmFirst} icon={<Waypoints />} />
+        <MetricCard label={copy.detectorMode} value={state.mode.toUpperCase()} detail={getStatusCopy(locale, state.status)} icon={<Activity />} />
+        <MetricCard label={copy.currentProject} value={project.symbol} detail={project.name} icon={<Crosshair />} />
+        <MetricCard
+          label={copy.mechanism}
+          value={getMechanismCopy(locale, project.mechanism.type)}
+          detail={`${project.mechanism.confidence}% ${copy.confidence}`}
+          icon={<ShieldCheck />}
+        />
       </section>
 
       <section className="workspace-grid">
-        <Panel title="Alpha Radar" action={`${state.events.length} events`}>
+        <Panel title={copy.alphaRadar} action={`${state.events.length} ${copy.events}`}>
           <div className="radar-table">
             <div className="radar-head">
-              <span>Project</span>
-              <span>Chain</span>
-              <span>Pool</span>
-              <span>Initial FDV</span>
-              <span>Buyout</span>
+              <span>{copy.project}</span>
+              <span>{copy.chain}</span>
+              <span>{copy.pool}</span>
+              <span>{copy.initialFdv}</span>
+              <span>{copy.buyout}</span>
             </div>
             <div className="radar-row">
               <div>
@@ -88,7 +96,7 @@ function App() {
                 <small>{project.symbol}</small>
               </div>
               <span>BSC / ETH</span>
-              <span>{project.pool.status}</span>
+              <span>{getPoolStatusCopy(locale, project.pool.status)}</span>
               <span>{project.pool.initialFdv}</span>
               <span>{project.pool.buyoutCost}</span>
             </div>
@@ -96,25 +104,22 @@ function App() {
           <SignalStrip signals={project.currentSignals} />
         </Panel>
 
-        <Panel title="Mechanism Detective" action="Rule engine v0">
+        <Panel title={copy.mechanismDetective} action={copy.ruleEngine}>
           <div className="mechanism-card">
             <div>
-              <span className="eyebrow">Classification</span>
-              <h2>{project.mechanism.type}</h2>
-              <p>
-                This looks like a timed Alpha pool instead of a subscription TGE because the seed
-                evidence points to start-time gated swaps and does not show deposit/claim settlement.
-              </p>
+              <span className="eyebrow">{copy.classification}</span>
+              <h2>{getMechanismCopy(locale, project.mechanism.type)}</h2>
+              <p>{copy.mechanismSummary}</p>
             </div>
             <div className="confidence-ring">{project.mechanism.confidence}%</div>
           </div>
           <div className="evidence-grid">
-            <EvidenceList title="Evidence" items={project.mechanism.evidence} positive />
-            <EvidenceList title="Missing" items={project.mechanism.missing} />
+            <EvidenceList title={copy.evidence} items={project.mechanism.evidence} positive />
+            <EvidenceList title={copy.missing} items={project.mechanism.missing} />
           </div>
         </Panel>
 
-        <Panel title="Live Event Stream" action={state.updatedAt.slice(11, 19)}>
+        <Panel title={copy.liveEventStream} action={state.updatedAt.slice(11, 19)}>
           <div className="event-list">
             {state.events.slice(0, 12).map((event) => (
               <EventRow key={event.id} event={event} />
@@ -122,12 +127,12 @@ function App() {
           </div>
         </Panel>
 
-        <Panel title="Pool & Supply Snapshot" action="NEX seed">
+        <Panel title={copy.poolSnapshot} action={copy.nexSeed}>
           <div className="snapshot-grid">
-            <SnapshotItem label="Open time" value={project.pool.openTime} />
-            <SnapshotItem label="Target push" value={project.pool.buyToTargetFdv} />
-            <SnapshotItem label="Total supply" value={project.supply.total} />
-            <SnapshotItem label="Bridged to BSC" value={project.supply.bridgedToBsc} />
+            <SnapshotItem label={copy.openTime} value={project.pool.openTime} />
+            <SnapshotItem label={copy.targetPush} value={project.pool.buyToTargetFdv} />
+            <SnapshotItem label={copy.totalSupply} value={project.supply.total} />
+            <SnapshotItem label={copy.bridgedToBsc} value={project.supply.bridgedToBsc} />
           </div>
           <div className="cex-row">
             {project.supply.watchedCex.map((cex) => (
@@ -140,13 +145,9 @@ function App() {
       <section className="alert-band">
         <div>
           <AlertTriangle size={20} />
-          <strong>Minimum useful feature</strong>
+          <strong>{copy.minimumUsefulFeature}</strong>
         </div>
-        <p>
-          The app already separates the realtime detector from the UI. Add RPC URLs and the server
-          polls watched Solidity contracts, streams fresh logs, and keeps the browser updated through
-          WebSocket.
-        </p>
+        <p>{copy.minimumUsefulFeatureBody}</p>
       </section>
 
       <section className="critical-list">
@@ -238,14 +239,6 @@ function SnapshotItem({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
-}
-
-function statusCopy(status: DetectorState["status"]) {
-  if (status === "demo") return "Seeded without RPC";
-  if (status === "live") return "Polling active";
-  if (status === "connecting") return "Opening RPC";
-  if (status === "degraded") return "RPC degraded";
-  return "Offline";
 }
 
 createRoot(document.getElementById("root")!).render(
