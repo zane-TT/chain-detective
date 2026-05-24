@@ -152,6 +152,43 @@ const poolStatusCopy: Record<Locale, Record<string, string>> = {
   },
 };
 
+const phraseCopy: Record<Locale, Record<string, string>> = {
+  en: {},
+  zh: {
+    "Detected initializePool-style lifecycle": "检测到类似 initializePool 的生命周期",
+    "Trading guarded by startTime/beforeSwap pattern": "交易受 startTime/beforeSwap 模式约束",
+    "Project-side liquidity ranges seed price discovery": "项目方流动性区间负责启动价格发现",
+    "No deposit/subscription flow": "未发现存入/认购流程",
+    "No claim/refund settlement flow": "未发现领取/退款结算流程",
+    "No visible bonding-curve accounting": "未发现明显的联合曲线记账",
+    "$600K to reach ~$400M FDV": "约 $600K 可推至 ~$400M FDV",
+    "~$1.08M buy-side depth": "买侧深度约 $1.08M",
+    "~5T NEX": "约 5T NEX",
+  },
+};
+
+const seedEventCopy: Record<Locale, Record<string, Pick<ChainEvent, "title" | "detail">>> = {
+  en: {},
+  zh: {
+    "seed-1": {
+      title: "检测到新的 Alpha hook 模式",
+      detail: "池子生命周期使用了较新的 initializePool 路径，旧版加池监听可能漏掉它。",
+    },
+    "seed-2": {
+      title: "池子已初始化，并带有定时交易门槛",
+      detail: "机制更像定时 Alpha 池，而不是基于存入/领取的 TGE 认购。",
+    },
+    "seed-3": {
+      title: "池子深度在接近 10 亿 FDV 前后受限",
+      detail: "种子流动性显示，约 6 亿 FDV 后波动会升高，买侧在约 108 万 USDT 附近耗尽。",
+    },
+    "seed-4": {
+      title: "Hyperlane 跨链供应需要监控",
+      detail: "主供应在 Ethereum；种子调查中约 5T NEX 已跨到 BSC。",
+    },
+  },
+};
+
 export function getCopy(locale: Locale) {
   return uiCopy[locale];
 }
@@ -172,3 +209,47 @@ export function getPoolStatusCopy(locale: Locale, status: string) {
   return poolStatusCopy[locale][status] ?? status;
 }
 
+export function getPhraseCopy(locale: Locale, phrase: string) {
+  return phraseCopy[locale][phrase] ?? phrase;
+}
+
+export function getEventCopy(locale: Locale, event: ChainEvent) {
+  if (locale === "en") {
+    return { title: event.title, detail: event.detail };
+  }
+
+  const seedCopy = seedEventCopy[locale][event.id];
+  if (seedCopy) return seedCopy;
+
+  if (event.id.startsWith("demo-")) {
+    return {
+      title: `演示检测心跳：${getSignalCopy(locale, event.signal)}`,
+      detail: "设置 BSC_RPC_URL 或 ETH_RPC_URL 后，事件流会从种子演示切换为实时链上轮询。",
+    };
+  }
+
+  if (event.signal === "Block") {
+    return {
+      title: `${event.chain.toUpperCase()} 区块 ${event.blockNumber ?? ""}`.trim(),
+      detail: "实时 RPC 连接正常。",
+    };
+  }
+
+  if (event.signal === "Transfer" || event.signal === "Log Match") {
+    return {
+      title: `${event.chain.toUpperCase()} 合约${event.signal === "Transfer" ? "触发被监控转账" : "产生日志命中"}`,
+      detail: event.address
+        ? `地址 ${event.address} 在日志索引中命中。`
+        : "被监控地址产生日志命中。",
+    };
+  }
+
+  if (event.signal === "Unknown Mechanism") {
+    return {
+      title: `${event.chain.toUpperCase()} 轮询异常`,
+      detail: event.detail,
+    };
+  }
+
+  return { title: event.title, detail: event.detail };
+}

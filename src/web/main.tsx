@@ -3,7 +3,17 @@ import { createRoot } from "react-dom/client";
 import { Activity, AlertTriangle, Crosshair, Radio, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, DetectorState, LifecycleSignal } from "../shared/types";
-import { defaultLocale, getCopy, getMechanismCopy, getPoolStatusCopy, getStatusCopy } from "./i18n";
+import {
+  defaultLocale,
+  getCopy,
+  getEventCopy,
+  getMechanismCopy,
+  getPhraseCopy,
+  getPoolStatusCopy,
+  getSignalCopy,
+  getStatusCopy,
+  type Locale,
+} from "./i18n";
 import "./styles.css";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -101,7 +111,7 @@ function App() {
               <span>{project.pool.buyoutCost}</span>
             </div>
           </div>
-          <SignalStrip signals={project.currentSignals} />
+          <SignalStrip signals={project.currentSignals} locale={locale} />
         </Panel>
 
         <Panel title={copy.mechanismDetective} action={copy.ruleEngine}>
@@ -114,15 +124,15 @@ function App() {
             <div className="confidence-ring">{project.mechanism.confidence}%</div>
           </div>
           <div className="evidence-grid">
-            <EvidenceList title={copy.evidence} items={project.mechanism.evidence} positive />
-            <EvidenceList title={copy.missing} items={project.mechanism.missing} />
+            <EvidenceList title={copy.evidence} items={project.mechanism.evidence} locale={locale} positive />
+            <EvidenceList title={copy.missing} items={project.mechanism.missing} locale={locale} />
           </div>
         </Panel>
 
         <Panel title={copy.liveEventStream} action={state.updatedAt.slice(11, 19)}>
           <div className="event-list">
             {state.events.slice(0, 12).map((event) => (
-              <EventRow key={event.id} event={event} />
+              <EventRow key={event.id} event={event} locale={locale} />
             ))}
           </div>
         </Panel>
@@ -130,9 +140,9 @@ function App() {
         <Panel title={copy.poolSnapshot} action={copy.nexSeed}>
           <div className="snapshot-grid">
             <SnapshotItem label={copy.openTime} value={project.pool.openTime} />
-            <SnapshotItem label={copy.targetPush} value={project.pool.buyToTargetFdv} />
+            <SnapshotItem label={copy.targetPush} value={getPhraseCopy(locale, project.pool.buyToTargetFdv)} />
             <SnapshotItem label={copy.totalSupply} value={project.supply.total} />
-            <SnapshotItem label={copy.bridgedToBsc} value={project.supply.bridgedToBsc} />
+            <SnapshotItem label={copy.bridgedToBsc} value={getPhraseCopy(locale, project.supply.bridgedToBsc)} />
           </div>
           <div className="cex-row">
             {project.supply.watchedCex.map((cex) => (
@@ -152,7 +162,7 @@ function App() {
 
       <section className="critical-list">
         {criticalEvents.map((event) => (
-          <EventRow key={`critical-${event.id}`} event={event} compact />
+          <EventRow key={`critical-${event.id}`} event={event} locale={locale} compact />
         ))}
       </section>
     </main>
@@ -192,40 +202,53 @@ function Panel({ title, action, children }: { title: string; action: string; chi
   );
 }
 
-function SignalStrip({ signals }: { signals: LifecycleSignal[] }) {
+function SignalStrip({ signals, locale }: { signals: LifecycleSignal[]; locale: Locale }) {
   return (
     <div className="signal-strip">
       {signals.map((signal) => (
-        <span key={signal}>{signal}</span>
+        <span key={signal}>{getSignalCopy(locale, signal)}</span>
       ))}
     </div>
   );
 }
 
-function EvidenceList({ title, items, positive = false }: { title: string; items: string[]; positive?: boolean }) {
+function EvidenceList({
+  title,
+  items,
+  locale,
+  positive = false,
+}: {
+  title: string;
+  items: string[];
+  locale: Locale;
+  positive?: boolean;
+}) {
   return (
     <div className={positive ? "evidence positive" : "evidence"}>
       <span>{title}</span>
       {items.map((item) => (
-        <p key={item}>{item}</p>
+        <p key={item}>{getPhraseCopy(locale, item)}</p>
       ))}
     </div>
   );
 }
 
-function EventRow({ event, compact = false }: { event: ChainEvent; compact?: boolean }) {
+function EventRow({ event, locale, compact = false }: { event: ChainEvent; locale: Locale; compact?: boolean }) {
+  const eventCopy = getEventCopy(locale, event);
+  const blockLabel = getCopy(locale).block;
+
   return (
     <article className={`event-row ${event.severity} ${compact ? "compact" : ""}`}>
       <div className="event-dot" />
       <div>
         <div className="event-title">
-          <strong>{event.title}</strong>
+          <strong>{eventCopy.title}</strong>
           <span>{event.chain}</span>
         </div>
-        {!compact && <p>{event.detail}</p>}
+        {!compact && <p>{eventCopy.detail}</p>}
         <small>
-          {event.signal} · {new Date(event.timestamp).toLocaleTimeString()}
-          {event.blockNumber ? ` · block ${event.blockNumber}` : ""}
+          {getSignalCopy(locale, event.signal)} / {new Date(event.timestamp).toLocaleTimeString()}
+          {event.blockNumber ? ` / ${blockLabel} ${event.blockNumber}` : ""}
         </small>
       </div>
     </article>
