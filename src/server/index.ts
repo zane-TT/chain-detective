@@ -1,10 +1,16 @@
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import Fastify from "fastify";
+import { z } from "zod";
 import { ChainDetector } from "./detector.js";
 
 const app = Fastify({ logger: true });
 const detector = new ChainDetector();
+const watchTokenSchema = z.object({
+  chain: z.enum(["bsc", "ethereum"]),
+  address: z.string(),
+  label: z.string().optional(),
+});
 
 await app.register(cors, {
   origin: true,
@@ -12,6 +18,23 @@ await app.register(cors, {
 await app.register(websocket);
 
 app.get("/api/status", async () => detector.getState());
+
+app.post("/api/watch-token", async (request, reply) => {
+  const parsed = watchTokenSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    return reply.code(400).send({ message: "Invalid watch token request." });
+  }
+
+  try {
+    const target = detector.addTokenTarget(parsed.data);
+    return { target, state: detector.getState() };
+  } catch (error) {
+    return reply.code(400).send({
+      message: error instanceof Error ? error.message : "Unable to add token address.",
+    });
+  }
+});
 
 app.get("/stream", { websocket: true }, (socket) => {
   const unsubscribe = detector.subscribe((state, event) => {

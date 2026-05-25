@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Crosshair, Languages, Radio, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Crosshair, Languages, Loader2, Plus, Radio, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
-import type { ChainEvent, DetectorState, LifecycleSignal } from "../shared/types";
+import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal } from "../shared/types";
 import {
   getCopy,
   getEventCopy,
@@ -39,8 +39,82 @@ function App() {
   const [locale, setLocale] = useState<Locale>(() =>
     resolveLocale(localStorage.getItem(localeStorageKey) ?? navigator.language),
   );
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [tokenChain, setTokenChain] = useState<ChainKey>("bsc");
+  const [tokenLabel, setTokenLabel] = useState("");
+  const [watchStatus, setWatchStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [watchMessage, setWatchMessage] = useState("");
   const copy = getCopy(locale);
   const project = state.projects[0];
+  const tokenFormCopy =
+    locale === "zh"
+      ? {
+          title: "添加代币监控",
+          chain: "链",
+          address: "代币合约地址",
+          label: "备注",
+          labelPlaceholder: "例如 NEX BSC token",
+          addressPlaceholder: "0x...",
+          submit: "加入监控",
+          saving: "添加中",
+          success: "已加入监控列表",
+          empty: "请输入代币合约地址",
+          watched: "已监控地址",
+        }
+      : {
+          title: "Add token watch",
+          chain: "Chain",
+          address: "Token contract address",
+          label: "Label",
+          labelPlaceholder: "e.g. NEX BSC token",
+          addressPlaceholder: "0x...",
+          submit: "Add watch",
+          saving: "Adding",
+          success: "Added to watchlist",
+          empty: "Enter a token contract address",
+          watched: "Watched addresses",
+        };
+
+  async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!tokenAddress.trim()) {
+      setWatchStatus("error");
+      setWatchMessage(tokenFormCopy.empty);
+      return;
+    }
+
+    setWatchStatus("saving");
+    setWatchMessage("");
+
+    try {
+      const response = await fetch("/api/watch-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chain: tokenChain,
+          address: tokenAddress.trim(),
+          label: tokenLabel.trim() || undefined,
+        }),
+      });
+      const payload = (await response.json()) as { message?: string; state?: DetectorState };
+
+      if (!response.ok || !payload.state) {
+        throw new Error(payload.message ?? "Unable to add token address.");
+      }
+
+      setState(payload.state);
+      setTokenAddress("");
+      setTokenLabel("");
+      setWatchStatus("success");
+      setWatchMessage(tokenFormCopy.success);
+    } catch (error) {
+      setWatchStatus("error");
+      setWatchMessage(error instanceof Error ? error.message : "Unable to add token address.");
+    }
+  }
 
   useEffect(() => {
     const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/stream`;
@@ -101,6 +175,55 @@ function App() {
           detail={`${project.mechanism.confidence}% ${copy.confidence}`}
           icon={<ShieldCheck />}
         />
+      </section>
+
+      <section className="watch-console">
+        <form className="watch-form" onSubmit={addTokenWatch}>
+          <div>
+            <span className="eyebrow">{tokenFormCopy.title}</span>
+            <div className="watch-fields">
+              <label>
+                <span>{tokenFormCopy.chain}</span>
+                <select value={tokenChain} onChange={(event) => setTokenChain(event.target.value as ChainKey)}>
+                  <option value="bsc">BSC</option>
+                  <option value="ethereum">Ethereum</option>
+                </select>
+              </label>
+              <label className="address-field">
+                <span>{tokenFormCopy.address}</span>
+                <input
+                  value={tokenAddress}
+                  onChange={(event) => setTokenAddress(event.target.value)}
+                  placeholder={tokenFormCopy.addressPlaceholder}
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                <span>{tokenFormCopy.label}</span>
+                <input
+                  value={tokenLabel}
+                  onChange={(event) => setTokenLabel(event.target.value)}
+                  placeholder={tokenFormCopy.labelPlaceholder}
+                />
+              </label>
+            </div>
+          </div>
+          <button type="submit" disabled={watchStatus === "saving"}>
+            {watchStatus === "saving" ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
+            {watchStatus === "saving" ? tokenFormCopy.saving : tokenFormCopy.submit}
+          </button>
+        </form>
+        <div className={`watch-message ${watchStatus}`}>{watchMessage}</div>
+        <div className="watch-list" aria-label={tokenFormCopy.watched}>
+          <span>{tokenFormCopy.watched}</span>
+          <div>
+            {project.contracts.map((target) => (
+              <code key={target.id}>
+                {target.chain.toUpperCase()} / {target.address.slice(0, 8)}...{target.address.slice(-6)}
+              </code>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="workspace-grid">

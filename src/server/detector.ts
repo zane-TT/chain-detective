@@ -1,4 +1,4 @@
-import { createPublicClient, http, type Log, type PublicClient } from "viem";
+import { createPublicClient, getAddress, http, isAddress, type Log, type PublicClient } from "viem";
 import { bsc, mainnet } from "viem/chains";
 import { chains } from "../shared/chainConfig.js";
 import { nexProject, seedEvents } from "../shared/seedData.js";
@@ -17,6 +17,11 @@ const viemChains = {
 } as const;
 
 type Listener = (state: DetectorState, event?: ChainEvent) => void;
+type AddTokenTargetInput = {
+  chain: ChainKey;
+  address: string;
+  label?: string;
+};
 
 const pollIntervalMs = 8_000;
 
@@ -45,6 +50,71 @@ export class ChainDetector {
 
   getState() {
     return this.state;
+  }
+
+  addTokenTarget(input: AddTokenTargetInput) {
+    if (!viemChains[input.chain]) {
+      throw new Error("Unsupported chain.");
+    }
+
+    if (!isAddress(input.address)) {
+      throw new Error("Invalid EVM token address.");
+    }
+
+    const address = getAddress(input.address) as `0x${string}`;
+    const project = this.state.projects[0];
+    const alreadyWatched = project.contracts.some(
+      (target) => target.chain === input.chain && target.address.toLowerCase() === address.toLowerCase(),
+    );
+
+    if (alreadyWatched) {
+      throw new Error("This token address is already being watched.");
+    }
+
+    const label = input.label?.trim() || `${input.chain.toUpperCase()} token ${address.slice(0, 6)}...${address.slice(-4)}`;
+    const target: WatchTarget = {
+      id: `custom-${input.chain}-${address.toLowerCase()}`,
+      projectId: project.id,
+      chain: input.chain,
+      label,
+      address,
+      kind: "token",
+      topics: [
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      ],
+    };
+
+    this.state = {
+      ...this.state,
+      projects: [
+        {
+          ...project,
+          contracts: [...project.contracts, target],
+          pool: {
+            ...project.pool,
+            status: "watching",
+          },
+        },
+        ...this.state.projects.slice(1),
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+
+    const event: ChainEvent = {
+      id: `watch-${target.id}-${Date.now()}`,
+      projectId: project.id,
+      chain: input.chain,
+      severity: "watch",
+      source: "detector",
+      signal: "Transfer",
+      title: `${label} added to watchlist`,
+      detail: `Token ${address} will be scanned for Transfer logs when ${input.chain} RPC polling is available.`,
+      address,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.pushEvent(event);
+    return target;
   }
 
   start() {
@@ -154,7 +224,9 @@ export class ChainDetector {
       return;
     }
 
-    const targets = nexProject.contracts.filter((target) => target.chain === chain.key);
+    const targets = this.state.projects.flatMap((project) =>
+      project.contracts.filter((target) => target.chain === chain.key),
+    );
     await Promise.all(
       targets.map((target) =>
         this.scanTargetLogs(client, target, previous + 1n, blockNumber),
