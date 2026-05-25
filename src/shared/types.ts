@@ -31,6 +31,7 @@ export interface ChainConfig {
   label: string;
   chainId: number;
   rpcEnv: string;
+  publicRpcUrl?: string;
   nativeSymbol: string;
 }
 

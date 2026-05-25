@@ -6,6 +6,7 @@ export const chains: ChainConfig[] = [
     label: "BNB Smart Chain",
     chainId: 56,
     rpcEnv: "BSC_RPC_URL",
+    publicRpcUrl: "https://bsc-dataseed-public.bnbchain.org",
     nativeSymbol: "BNB",
   },
   {

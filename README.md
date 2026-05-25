@@ -24,11 +24,12 @@ npm install
 npm run dev
 ```
 
-Optional live RPC environment:
+BSC live polling works out of the box through the public BNB Chain RPC endpoint.
+For a private or higher-quota RPC, override the defaults with environment variables:
 
 ```bash
 BSC_RPC_URL=https://...
 ETH_RPC_URL=https://...
 ```
 
-Without RPC URLs, the server runs in demo mode and streams the seeded Nexus investigation events.
+Without an Ethereum RPC URL, Ethereum remains in demo/offline seed mode until `ETH_RPC_URL` is set.

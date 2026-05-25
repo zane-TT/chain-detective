@@ -25,6 +25,10 @@ type AddTokenTargetInput = {
 
 const pollIntervalMs = 8_000;
 
+function resolveRpcUrl(chain: ChainConfig) {
+  return process.env[chain.rpcEnv] || chain.publicRpcUrl;
+}
+
 export class ChainDetector {
   private state: DetectorState = {
     status: "demo",
@@ -118,7 +122,7 @@ export class ChainDetector {
   }
 
   start() {
-    const liveChains = chains.filter((chain) => Boolean(process.env[chain.rpcEnv]));
+    const liveChains = chains.filter((chain) => Boolean(resolveRpcUrl(chain)));
 
     if (liveChains.length === 0) {
       this.startDemoPulse();
@@ -167,7 +171,7 @@ export class ChainDetector {
   }
 
   private startChainPolling(chain: ChainConfig) {
-    const rpcUrl = process.env[chain.rpcEnv];
+    const rpcUrl = resolveRpcUrl(chain);
     if (!rpcUrl) return;
 
     const client = createPublicClient({
