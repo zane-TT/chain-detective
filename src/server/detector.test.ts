@@ -1,0 +1,92 @@
+import assert from "node:assert/strict";
+import { after, test } from "node:test";
+import type { Log } from "viem";
+import { ChainDetector } from "./detector.js";
+import type { ChainConfig, ChainEvent } from "../shared/types.js";
+
+const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const watchedAddress = "0x67de2c572fe83c2ff21452f9e7f64b1ac1be7777";
+
+const testChain: ChainConfig = {
+  key: "bsc",
+  label: "BNB Smart Chain",
+  chainId: 56,
+  rpcEnv: "TEST_BSC_RPC_URL",
+  publicRpcUrl: "mock://bsc",
+  nativeSymbol: "BNB",
+};
+
+const detectors: ChainDetector[] = [];
+
+after(() => {
+  for (const detector of detectors) {
+    detector.stop();
+  }
+});
+
+test("monitors the requested token address and emits Transfer matches", async () => {
+  let blockNumber = 100n;
+  const scannedAddresses: string[] = [];
+  const detector = new ChainDetector({
+    chainConfigs: [testChain],
+    pollIntervalMs: 10,
+    createClient: () => ({
+      getBlockNumber: async () => blockNumber++,
+      getLogs: async ({ address, fromBlock, toBlock }) => {
+        scannedAddresses.push(address.toLowerCase());
+
+        if (address.toLowerCase() !== watchedAddress) {
+          return [];
+        }
+
+        assert.equal(fromBlock, 101n);
+        assert.equal(toBlock, 101n);
+
+        return [
+          {
+            address,
+            blockNumber: 101n,
+            transactionHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            logIndex: 0,
+            topics: [transferTopic],
+            data: "0x",
+            blockHash: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+            transactionIndex: 0,
+            removed: false,
+          } satisfies Log,
+        ];
+      },
+    }),
+  });
+  detectors.push(detector);
+
+  const target = detector.addTokenTarget({
+    chain: "bsc",
+    address: watchedAddress,
+    label: "Requested token",
+  });
+
+  assert.equal(target.address.toLowerCase(), watchedAddress);
+  assert.deepEqual(target.topics, [transferTopic]);
+
+  const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for watched Transfer event.")), 500);
+    const unsubscribe = detector.subscribe((_state, event) => {
+      if (event?.source === "rpc" && event.address?.toLowerCase() === watchedAddress) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(event);
+      }
+    });
+  });
+
+  detector.start();
+
+  const event = await matchedEvent;
+
+  assert.equal(event.signal, "Transfer");
+  assert.equal(event.severity, "watch");
+  assert.equal(event.blockNumber, "101");
+  assert.equal(event.txHash, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+  assert.ok(scannedAddresses.includes(watchedAddress));
+});

@@ -10,6 +10,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "server": "tsx src/server/index.ts",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test:live:bsc": "set RUN_LIVE_BSC_TESTS=1&& node --import tsx --test \"src/server/detector.live.test.ts\"",
     "typecheck": "tsc -b"
   },
   "dependencies": {

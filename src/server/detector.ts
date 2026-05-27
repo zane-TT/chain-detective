@@ -29,7 +29,28 @@ function resolveRpcUrl(chain: ChainConfig) {
   return process.env[chain.rpcEnv] || chain.publicRpcUrl;
 }
 
+type GetLogsInput = {
+  address: `0x${string}`;
+  fromBlock: bigint;
+  toBlock: bigint;
+  event?: undefined;
+  args?: undefined;
+};
+type ChainClient = {
+  getBlockNumber: () => Promise<bigint>;
+  getLogs: (input: GetLogsInput) => Promise<Log[]>;
+};
+type ChainDetectorOptions = {
+  chainConfigs?: ChainConfig[];
+  createClient?: (chain: ChainConfig, rpcUrl: string) => ChainClient;
+  initialLatestBlocks?: Partial<Record<ChainKey, bigint>>;
+  pollIntervalMs?: number;
+};
+
 export class ChainDetector {
+  private readonly chainConfigs: ChainConfig[];
+  private readonly createClient: (chain: ChainConfig, rpcUrl: string) => ChainClient;
+  private readonly pollIntervalMs: number;
   private state: DetectorState = {
     status: "demo",
     mode: "demo",
@@ -45,6 +66,24 @@ export class ChainDetector {
   private listeners = new Set<Listener>();
   private timers: NodeJS.Timeout[] = [];
   private latestBlocks = new Map<ChainKey, bigint>();
+
+  constructor(options: ChainDetectorOptions = {}) {
+    this.chainConfigs = options.chainConfigs ?? chains;
+    this.createClient =
+      options.createClient ??
+      ((chain, rpcUrl) =>
+        createPublicClient({
+          chain: viemChains[chain.key],
+          transport: http(rpcUrl),
+        }) as ChainClient);
+    this.pollIntervalMs = options.pollIntervalMs ?? pollIntervalMs;
+
+    for (const [chain, blockNumber] of Object.entries(options.initialLatestBlocks ?? {})) {
+      if (blockNumber !== undefined) {
+        this.latestBlocks.set(chain as ChainKey, blockNumber);
+      }
+    }
+  }
 
   subscribe(listener: Listener) {
     this.listeners.add(listener);
@@ -122,7 +161,7 @@ export class ChainDetector {
   }
 
   start() {
-    const liveChains = chains.filter((chain) => Boolean(resolveRpcUrl(chain)));
+    const liveChains = this.chainConfigs.filter((chain) => Boolean(resolveRpcUrl(chain)));
 
     if (liveChains.length === 0) {
       this.startDemoPulse();
@@ -174,10 +213,7 @@ export class ChainDetector {
     const rpcUrl = resolveRpcUrl(chain);
     if (!rpcUrl) return;
 
-    const client = createPublicClient({
-      chain: viemChains[chain.key],
-      transport: http(rpcUrl),
-    });
+    const client = this.createClient(chain, rpcUrl);
 
     this.setChainStatus(chain.key, "connecting");
 
@@ -202,11 +238,11 @@ export class ChainDetector {
     };
 
     void tick();
-    const timer = setInterval(() => void tick(), pollIntervalMs);
+    const timer = setInterval(() => void tick(), this.pollIntervalMs);
     this.timers.push(timer);
   }
 
-  private async pollChain(chain: ChainConfig, client: PublicClient) {
+  private async pollChain(chain: ChainConfig, client: ChainClient) {
     const blockNumber = await client.getBlockNumber();
     const previous = this.latestBlocks.get(chain.key);
     this.latestBlocks.set(chain.key, blockNumber);
@@ -239,7 +275,7 @@ export class ChainDetector {
   }
 
   private async scanTargetLogs(
-    client: PublicClient,
+    client: ChainClient,
     target: WatchTarget,
     fromBlock: bigint,
     toBlock: bigint,
