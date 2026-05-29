@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Crosshair, Languages, Loader2, Plus, Radio, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Crosshair, Languages, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
-import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal } from "../shared/types";
+import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal, TokenLiquidityAnalysis } from "../shared/types";
 import {
   getCopy,
   getEventCopy,
@@ -30,6 +30,7 @@ const initialState: DetectorState = {
   },
   projects: [nexProject],
   events: seedEvents,
+  liquidityAnalyses: [],
   updatedAt: new Date().toISOString(),
 };
 
@@ -44,8 +45,11 @@ function App() {
   const [tokenLabel, setTokenLabel] = useState("");
   const [watchStatus, setWatchStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [watchMessage, setWatchMessage] = useState("");
+  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [analysisMessage, setAnalysisMessage] = useState("");
   const copy = getCopy(locale);
   const project = state.projects[0];
+  const latestLiquidityAnalysis = state.liquidityAnalyses[0];
   const tokenFormCopy =
     locale === "zh"
       ? {
@@ -73,6 +77,34 @@ function App() {
           success: "Added to watchlist",
           empty: "Enter a token contract address",
           watched: "Watched addresses",
+        };
+  const liquidityCopy =
+    locale === "zh"
+      ? {
+          analyze: "分析流动池钱包",
+          analyzing: "分析中",
+          analyzeSuccess: "流动池钱包分析完成",
+          analysisTitle: "流动池钱包画像",
+          pools: "池子",
+          wallets: "LP 钱包",
+          relations: "关联关系",
+          majorHolder: "持仓 >= 0.1%",
+          noAnalysis: "输入代币地址后点击分析。",
+          scanRange: "扫描区块",
+          warnings: "注意",
+        }
+      : {
+          analyze: "Analyze LP wallets",
+          analyzing: "Analyzing",
+          analyzeSuccess: "Liquidity wallet analysis complete",
+          analysisTitle: "Liquidity wallet profile",
+          pools: "Pools",
+          wallets: "LP wallets",
+          relations: "Relations",
+          majorHolder: "Holding >= 0.1%",
+          noAnalysis: "Enter a token address, then run analysis.",
+          scanRange: "Scanned blocks",
+          warnings: "Warnings",
         };
 
   async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
@@ -113,6 +145,42 @@ function App() {
     } catch (error) {
       setWatchStatus("error");
       setWatchMessage(error instanceof Error ? error.message : "Unable to add token address.");
+    }
+  }
+
+  async function analyzeLiquidity() {
+    if (!tokenAddress.trim()) {
+      setAnalysisStatus("error");
+      setAnalysisMessage(tokenFormCopy.empty);
+      return;
+    }
+
+    setAnalysisStatus("loading");
+    setAnalysisMessage("");
+
+    try {
+      const response = await fetch("/api/analyze-liquidity", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chain: tokenChain,
+          address: tokenAddress.trim(),
+        }),
+      });
+      const payload = (await response.json()) as { message?: string; state?: DetectorState };
+
+      if (!response.ok || !payload.state) {
+        throw new Error(payload.message ?? "Unable to analyze token liquidity.");
+      }
+
+      setState(payload.state);
+      setAnalysisStatus("success");
+      setAnalysisMessage(liquidityCopy.analyzeSuccess);
+    } catch (error) {
+      setAnalysisStatus("error");
+      setAnalysisMessage(error instanceof Error ? error.message : "Unable to analyze token liquidity.");
     }
   }
 
@@ -208,12 +276,19 @@ function App() {
               </label>
             </div>
           </div>
-          <button type="submit" disabled={watchStatus === "saving"}>
-            {watchStatus === "saving" ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
-            {watchStatus === "saving" ? tokenFormCopy.saving : tokenFormCopy.submit}
-          </button>
+          <div className="watch-actions">
+            <button type="submit" disabled={watchStatus === "saving"}>
+              {watchStatus === "saving" ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
+              {watchStatus === "saving" ? tokenFormCopy.saving : tokenFormCopy.submit}
+            </button>
+            <button type="button" className="secondary" disabled={analysisStatus === "loading"} onClick={analyzeLiquidity}>
+              {analysisStatus === "loading" ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
+              {analysisStatus === "loading" ? liquidityCopy.analyzing : liquidityCopy.analyze}
+            </button>
+          </div>
         </form>
         <div className={`watch-message ${watchStatus}`}>{watchMessage}</div>
+        <div className={`watch-message ${analysisStatus}`}>{analysisMessage}</div>
         <div className="watch-list" aria-label={tokenFormCopy.watched}>
           <span>{tokenFormCopy.watched}</span>
           <div>
@@ -224,6 +299,7 @@ function App() {
             ))}
           </div>
         </div>
+        <LiquidityAnalysisPanel analysis={latestLiquidityAnalysis} labels={liquidityCopy} />
       </section>
 
       <section className="workspace-grid">
@@ -323,6 +399,87 @@ function MetricCard({
       <strong>{value}</strong>
       <small>{detail}</small>
     </article>
+  );
+}
+
+function LiquidityAnalysisPanel({
+  analysis,
+  labels,
+}: {
+  analysis?: TokenLiquidityAnalysis;
+  labels: {
+    analysisTitle: string;
+    pools: string;
+    wallets: string;
+    relations: string;
+    majorHolder: string;
+    noAnalysis: string;
+    scanRange: string;
+    warnings: string;
+  };
+}) {
+  if (!analysis) {
+    return (
+      <section className="liquidity-panel empty">
+        <span className="eyebrow">{labels.analysisTitle}</span>
+        <p>{labels.noAnalysis}</p>
+      </section>
+    );
+  }
+
+  const majorWallets = analysis.wallets.filter((wallet) => wallet.isMajorHolder);
+
+  return (
+    <section className="liquidity-panel">
+      <header>
+        <div>
+          <span className="eyebrow">{labels.analysisTitle}</span>
+          <strong>
+            {analysis.chain.toUpperCase()} / {analysis.tokenAddress.slice(0, 8)}...{analysis.tokenAddress.slice(-6)}
+          </strong>
+        </div>
+        <span>
+          {labels.scanRange} {analysis.scannedFromBlock}-{analysis.scannedToBlock}
+        </span>
+      </header>
+      <div className="liquidity-metrics">
+        <SnapshotItem label={labels.pools} value={analysis.pools.length.toString()} />
+        <SnapshotItem label={labels.wallets} value={analysis.wallets.length.toString()} />
+        <SnapshotItem label={labels.relations} value={analysis.relations.length.toString()} />
+        <SnapshotItem label={labels.majorHolder} value={majorWallets.length.toString()} />
+      </div>
+      <div className="liquidity-table">
+        <div className="liquidity-head">
+          <span>Wallet</span>
+          <span>Share</span>
+          <span>Pools</span>
+          <span>Relations</span>
+        </div>
+        {analysis.wallets.slice(0, 8).map((wallet) => (
+          <div className={wallet.isMajorHolder ? "liquidity-row major" : "liquidity-row"} key={wallet.address}>
+            <code>{wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}</code>
+            <span>{wallet.totalSupplySharePercent.toFixed(4)}%</span>
+            <span>{wallet.poolAddresses.length}</span>
+            <span>{wallet.relations.length}</span>
+          </div>
+        ))}
+      </div>
+      <div className="pool-chip-row">
+        {analysis.pools.slice(0, 6).map((pool) => (
+          <code key={pool.pairAddress}>
+            {pool.dex} / {pool.pairAddress.slice(0, 8)}...{pool.pairAddress.slice(-6)} / {pool.providerCount}
+          </code>
+        ))}
+      </div>
+      {analysis.warnings.length > 0 && (
+        <div className="analysis-warnings">
+          <span>{labels.warnings}</span>
+          {analysis.warnings.slice(0, 3).map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

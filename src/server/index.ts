@@ -11,6 +11,10 @@ const watchTokenSchema = z.object({
   address: z.string(),
   label: z.string().optional(),
 });
+const analyzeLiquiditySchema = z.object({
+  chain: z.enum(["bsc", "ethereum"]),
+  address: z.string(),
+});
 
 await app.register(cors, {
   origin: true,
@@ -32,6 +36,23 @@ app.post("/api/watch-token", async (request, reply) => {
   } catch (error) {
     return reply.code(400).send({
       message: error instanceof Error ? error.message : "Unable to add token address.",
+    });
+  }
+});
+
+app.post("/api/analyze-liquidity", async (request, reply) => {
+  const parsed = analyzeLiquiditySchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    return reply.code(400).send({ message: "Invalid liquidity analysis request." });
+  }
+
+  try {
+    const analysis = await detector.analyzeTokenLiquidity(parsed.data);
+    return { analysis, state: detector.getState() };
+  } catch (error) {
+    return reply.code(400).send({
+      message: error instanceof Error ? error.message : "Unable to analyze token liquidity.",
     });
   }
 });

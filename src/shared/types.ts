@@ -87,11 +87,63 @@ export interface ChainEvent {
   timestamp: string;
 }
 
+export interface LiquidityWalletRelation {
+  wallet: `0x${string}`;
+  relation: "same-pool" | "same-transaction" | "multi-pool";
+  evidence: string;
+}
+
+export interface LiquidityProviderWallet {
+  address: `0x${string}`;
+  poolAddresses: `0x${string}`[];
+  addLiquidityTxs: `0x${string}`[];
+  firstBlock: string;
+  lastBlock: string;
+  tokenBalance: string;
+  totalSupplySharePercent: number;
+  isMajorHolder: boolean;
+  relations: LiquidityWalletRelation[];
+}
+
+export interface LiquidityPoolAnalysis {
+  dex: string;
+  factoryAddress: `0x${string}`;
+  pairAddress: `0x${string}`;
+  tokenSide: "token0" | "token1";
+  mintEventCount: number;
+  providerCount: number;
+  firstBlock?: string;
+  lastBlock?: string;
+}
+
+export interface WalletRelationEdge {
+  source: `0x${string}`;
+  target: `0x${string}`;
+  relation: "same-pool" | "same-transaction" | "multi-pool";
+  evidence: string;
+}
+
+export interface TokenLiquidityAnalysis {
+  id: string;
+  chain: ChainKey;
+  tokenAddress: `0x${string}`;
+  status: "complete" | "degraded";
+  thresholdPercent: number;
+  scannedFromBlock: string;
+  scannedToBlock: string;
+  pools: LiquidityPoolAnalysis[];
+  wallets: LiquidityProviderWallet[];
+  relations: WalletRelationEdge[];
+  warnings: string[];
+  updatedAt: string;
+}
+
 export interface DetectorState {
   status: DetectorStatus;
   mode: "demo" | "live";
   chains: Record<ChainKey, DetectorStatus>;
   projects: ProjectSnapshot[];
   events: ChainEvent[];
+  liquidityAnalyses: TokenLiquidityAnalysis[];
   updatedAt: string;
 }

@@ -90,3 +90,87 @@ test("monitors the requested token address and emits Transfer matches", async ()
   assert.equal(event.txHash, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
   assert.ok(scannedAddresses.includes(watchedAddress));
 });
+
+test("analyzes V2 liquidity wallets and flags holders above threshold", async () => {
+  const token = "0x1111111111111111111111111111111111111111";
+  const pair = "0x2222222222222222222222222222222222222222";
+  const walletA = "0x3333333333333333333333333333333333333333";
+  const walletB = "0x4444444444444444444444444444444444444444";
+  const txA = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const txB = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+  const detector = new ChainDetector({
+    chainConfigs: [testChain],
+    createClient: () => ({
+      getBlockNumber: async () => 100n,
+      getLogs: async ({ address, event }) => {
+        if (address.toLowerCase() !== pair || !event) {
+          return [];
+        }
+
+        return [
+          {
+            address,
+            blockNumber: 80n,
+            transactionHash: txA,
+            logIndex: 0,
+            topics: [],
+            data: "0x",
+            blockHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+            transactionIndex: 0,
+            removed: false,
+          },
+          {
+            address,
+            blockNumber: 90n,
+            transactionHash: txB,
+            logIndex: 1,
+            topics: [],
+            data: "0x",
+            blockHash: "0x2222222222222222222222222222222222222222222222222222222222222222",
+            transactionIndex: 0,
+            removed: false,
+          },
+        ] satisfies Log[];
+      },
+      getTransaction: async ({ hash }) => ({
+        from: hash === txA ? walletA : walletB,
+      }),
+      readContract: async ({ address, functionName, args }) => {
+        if (functionName === "getPair" && address === "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73") {
+          return pair;
+        }
+        if (functionName === "getPair") {
+          return "0x0000000000000000000000000000000000000000";
+        }
+        if (functionName === "token0") {
+          return token;
+        }
+        if (functionName === "totalSupply") {
+          return 1000n;
+        }
+        if (functionName === "decimals") {
+          return 0;
+        }
+        if (functionName === "balanceOf") {
+          return args[0] === walletA ? 2n : 1n;
+        }
+        return 0n;
+      },
+    }),
+  });
+
+  const analysis = await detector.analyzeTokenLiquidity({
+    chain: "bsc",
+    address: token,
+  });
+
+  assert.equal(analysis.pools.length, 1);
+  assert.equal(analysis.wallets.length, 2);
+  assert.equal(analysis.wallets[0].address, walletA);
+  assert.equal(analysis.wallets[0].isMajorHolder, true);
+  assert.equal(analysis.wallets[0].totalSupplySharePercent, 0.2);
+  assert.equal(analysis.wallets[1].isMajorHolder, true);
+  assert.equal(analysis.wallets[1].totalSupplySharePercent, 0.1);
+  assert.equal(detector.getState().liquidityAnalyses[0].tokenAddress, token);
+});

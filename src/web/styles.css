@@ -267,19 +267,30 @@ h1 {
   box-shadow: 0 0 0 3px rgba(159, 242, 189, 0.12);
 }
 
+.watch-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .watch-form button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   height: 42px;
-  min-width: 136px;
+  min-width: 168px;
   border: 0;
   border-radius: 8px;
   background: #9ff2bd;
   color: #07110c;
   font-weight: 800;
   cursor: pointer;
+}
+
+.watch-form button.secondary {
+  border: 1px solid rgba(159, 242, 189, 0.24);
+  background: rgba(159, 242, 189, 0.08);
+  color: #c7f8d7;
 }
 
 .watch-form button:disabled {
@@ -319,6 +330,127 @@ h1 {
   background: rgba(159, 242, 189, 0.07);
   color: #c7f8d7;
   font-size: 12px;
+}
+
+.liquidity-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(159, 242, 189, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.liquidity-panel.empty {
+  min-height: 86px;
+  align-content: center;
+}
+
+.liquidity-panel.empty p {
+  margin-top: 6px;
+  color: #91a098;
+  font-size: 13px;
+}
+
+.liquidity-panel header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.liquidity-panel header strong {
+  display: block;
+  margin-top: 6px;
+  color: #eef5ef;
+  font-size: 14px;
+}
+
+.liquidity-panel header > span {
+  color: #8d9c94;
+  font-size: 12px;
+  text-align: right;
+}
+
+.liquidity-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.liquidity-metrics .snapshot-item {
+  min-height: 84px;
+}
+
+.liquidity-table {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.liquidity-head,
+.liquidity-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) 0.5fr 0.4fr 0.5fr;
+  gap: 12px;
+  align-items: center;
+  min-width: 560px;
+  padding: 10px 12px;
+}
+
+.liquidity-head {
+  background: rgba(255, 255, 255, 0.04);
+  color: #8d9c94;
+  font-size: 12px;
+}
+
+.liquidity-row {
+  color: #dce8df;
+  font-size: 13px;
+}
+
+.liquidity-row.major {
+  background: rgba(238, 179, 82, 0.1);
+  color: #fff1cd;
+}
+
+.liquidity-row code,
+.pool-chip-row code {
+  color: inherit;
+  font-size: 12px;
+}
+
+.pool-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pool-chip-row code {
+  border: 1px solid rgba(159, 242, 189, 0.18);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(159, 242, 189, 0.07);
+}
+
+.analysis-warnings {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(238, 179, 82, 0.18);
+  border-radius: 8px;
+  background: rgba(238, 179, 82, 0.07);
+}
+
+.analysis-warnings span {
+  color: #eeb352;
+  font-size: 12px;
+}
+
+.analysis-warnings p {
+  color: #cdbf9e;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .spin {
@@ -610,6 +742,7 @@ h1 {
   }
 
   .watch-form button,
+  .watch-actions,
   .address-field {
     grid-column: 1 / -1;
   }
@@ -638,6 +771,7 @@ h1 {
   .summary-grid,
   .watch-form,
   .watch-fields,
+  .liquidity-metrics,
   .workspace-grid,
   .critical-list,
   .evidence-grid,
