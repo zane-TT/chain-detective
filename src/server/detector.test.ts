@@ -174,3 +174,46 @@ test("analyzes V2 liquidity wallets and flags holders above threshold", async ()
   assert.equal(analysis.wallets[1].totalSupplySharePercent, 0.1);
   assert.equal(detector.getState().liquidityAnalyses[0].tokenAddress, token);
 });
+
+test("reports degraded globally when any live chain polling fails", async () => {
+  const ethereumChain: ChainConfig = {
+    key: "ethereum",
+    label: "Ethereum",
+    chainId: 1,
+    rpcEnv: "TEST_ETH_RPC_URL",
+    publicRpcUrl: "mock://ethereum",
+    nativeSymbol: "ETH",
+  };
+  const detector = new ChainDetector({
+    chainConfigs: [testChain, ethereumChain],
+    pollIntervalMs: 10,
+    createClient: (chain) => ({
+      getBlockNumber: async () => {
+        if (chain.key === "ethereum") {
+          throw new Error("RPC unavailable");
+        }
+
+        return 100n;
+      },
+      getLogs: async () => [],
+    }),
+  });
+  detectors.push(detector);
+
+  const degradedState = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for degraded status.")), 500);
+    const unsubscribe = detector.subscribe((state) => {
+      if (state.chains.ethereum === "degraded") {
+        clearTimeout(timeout);
+        unsubscribe();
+        assert.equal(state.status, "degraded");
+        assert.equal(state.chains.bsc, "live");
+        resolve();
+      }
+    });
+  });
+
+  detector.start();
+
+  await degradedState;
+});

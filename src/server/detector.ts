@@ -871,16 +871,28 @@ export class ChainDetector {
   }
 
   private setChainStatus(chain: ChainKey, status: DetectorStatus) {
+    const chains = {
+      ...this.state.chains,
+      [chain]: status,
+    };
+
     this.state = {
       ...this.state,
-      status: this.state.mode === "live" ? "live" : this.state.status,
-      chains: {
-        ...this.state.chains,
-        [chain]: status,
-      },
+      status: this.state.mode === "live" ? this.resolveDetectorStatus(chains) : this.state.status,
+      chains,
       updatedAt: new Date().toISOString(),
     };
     this.emit();
+  }
+
+  private resolveDetectorStatus(chains: Record<ChainKey, DetectorStatus>): DetectorStatus {
+    const statuses = Object.values(chains);
+
+    if (statuses.some((status) => status === "degraded")) return "degraded";
+    if (statuses.some((status) => status === "connecting")) return "connecting";
+    if (statuses.every((status) => status === "live")) return "live";
+    if (statuses.every((status) => status === "offline")) return "offline";
+    return statuses.some((status) => status === "live") ? "live" : this.state.status;
   }
 
   private pushEvent(event: ChainEvent) {
