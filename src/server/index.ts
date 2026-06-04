@@ -26,6 +26,8 @@ await app.register(cors, {
 });
 await app.register(websocket);
 
+app.get("/healthz", async () => detector.getHealth());
+
 app.get("/api/status", async () => detector.getState());
 
 app.get("/api/summary", async () => detector.getSummary());

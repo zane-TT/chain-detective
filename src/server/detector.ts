@@ -222,6 +222,18 @@ export class ChainDetector {
     return this.state;
   }
 
+  getHealth() {
+    const summary = this.getSummary();
+
+    return {
+      ok: summary.status !== "offline",
+      mode: summary.mode,
+      status: summary.status,
+      chainStatuses: summary.chains,
+      updatedAt: summary.updatedAt,
+    };
+  }
+
   getSummary() {
     const contracts = this.state.projects.flatMap((project) => project.contracts);
     const eventsBySeverity = this.state.events.reduce(

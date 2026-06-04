@@ -110,6 +110,17 @@ test("summarizes watched targets and event severities", () => {
   assert.ok(summary.latestEventAt);
 });
 
+test("exposes a lightweight health snapshot", () => {
+  const detector = new ChainDetector();
+  const health = detector.getHealth();
+
+  assert.equal(health.ok, true);
+  assert.equal(health.mode, "demo");
+  assert.equal(health.status, "demo");
+  assert.deepEqual(health.chainStatuses, { bsc: "demo", ethereum: "demo" });
+  assert.ok(health.updatedAt);
+});
+
 test("filters events by chain and severity with a bounded limit", () => {
   const detector = new ChainDetector();
 
