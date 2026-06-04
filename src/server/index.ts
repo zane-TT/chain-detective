@@ -23,6 +23,8 @@ await app.register(websocket);
 
 app.get("/api/status", async () => detector.getState());
 
+app.get("/api/summary", async () => detector.getSummary());
+
 app.post("/api/watch-token", async (request, reply) => {
   const parsed = watchTokenSchema.safeParse(request.body);
 

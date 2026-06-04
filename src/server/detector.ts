@@ -217,6 +217,31 @@ export class ChainDetector {
     return this.state;
   }
 
+  getSummary() {
+    const contracts = this.state.projects.flatMap((project) => project.contracts);
+    const eventsBySeverity = this.state.events.reduce(
+      (totals, event) => ({
+        ...totals,
+        [event.severity]: totals[event.severity] + 1,
+      }),
+      { alert: 0, info: 0, watch: 0 } satisfies Record<ChainEvent["severity"], number>,
+    );
+
+    return {
+      mode: this.state.mode,
+      status: this.state.status,
+      chains: this.state.chains,
+      projectCount: this.state.projects.length,
+      watchedTargetCount: contracts.length,
+      tokenTargetCount: contracts.filter((target) => target.kind === "token").length,
+      eventCount: this.state.events.length,
+      eventsBySeverity,
+      latestEventAt: this.state.events[0]?.timestamp,
+      latestLiquidityAnalysisAt: this.state.liquidityAnalyses[0]?.updatedAt,
+      updatedAt: this.state.updatedAt,
+    };
+  }
+
   addTokenTarget(input: AddTokenTargetInput) {
     if (!viemChains[input.chain]) {
       throw new Error("Unsupported chain.");

@@ -91,6 +91,25 @@ test("monitors the requested token address and emits Transfer matches", async ()
   assert.ok(scannedAddresses.includes(watchedAddress));
 });
 
+test("summarizes watched targets and event severities", () => {
+  const detector = new ChainDetector();
+  const initialSummary = detector.getSummary();
+
+  detector.addTokenTarget({
+    chain: "bsc",
+    address: "0x5555555555555555555555555555555555555555",
+  });
+
+  const summary = detector.getSummary();
+
+  assert.equal(summary.projectCount, initialSummary.projectCount);
+  assert.equal(summary.watchedTargetCount, initialSummary.watchedTargetCount + 1);
+  assert.equal(summary.tokenTargetCount, initialSummary.tokenTargetCount + 1);
+  assert.equal(summary.eventCount, initialSummary.eventCount + 1);
+  assert.equal(summary.eventsBySeverity.watch, initialSummary.eventsBySeverity.watch + 1);
+  assert.ok(summary.latestEventAt);
+});
+
 test("analyzes V2 liquidity wallets and flags holders above threshold", async () => {
   const token = "0x1111111111111111111111111111111111111111";
   const pair = "0x2222222222222222222222222222222222222222";
