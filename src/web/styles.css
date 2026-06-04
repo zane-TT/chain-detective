@@ -668,6 +668,7 @@ h1 {
 .event-filter {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
   color: #9ff2bd;
@@ -692,6 +693,34 @@ h1 {
 .event-filter button:focus-visible {
   outline: 2px solid #9ff2bd;
   outline-offset: 2px;
+}
+
+.event-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 190px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #91a098;
+}
+
+.event-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #eef5ef;
+  outline: 0;
+  font-size: 12px;
+}
+
+.event-search input::placeholder {
+  color: #637168;
 }
 
 .event-row {

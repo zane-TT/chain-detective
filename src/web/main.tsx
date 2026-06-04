@@ -48,6 +48,7 @@ function App() {
   const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
   const [eventSeverityFilter, setEventSeverityFilter] = useState<"all" | ChainEvent["severity"]>("all");
+  const [eventSearch, setEventSearch] = useState("");
   const [copiedAddress, setCopiedAddress] = useState("");
   const copy = getCopy(locale);
   const project = state.projects[0];
@@ -114,6 +115,7 @@ function App() {
     watch: "Watch",
     info: "Info",
   } as const;
+  const normalizedEventSearch = eventSearch.trim().toLowerCase();
 
   async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -231,8 +233,16 @@ function App() {
     () =>
       state.events
         .filter((event) => eventSeverityFilter === "all" || event.severity === eventSeverityFilter)
+        .filter((event) => {
+          if (!normalizedEventSearch) return true;
+
+          return [event.title, event.detail, event.chain, event.signal, event.blockNumber ?? ""]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedEventSearch);
+        })
         .slice(0, 12),
-    [eventSeverityFilter, state.events],
+    [eventSeverityFilter, normalizedEventSearch, state.events],
   );
 
   return (
@@ -390,6 +400,15 @@ function App() {
                 {eventFilterCopy[severity]}
               </button>
             ))}
+            <label className="event-search">
+              <Search size={14} />
+              <input
+                value={eventSearch}
+                onChange={(event) => setEventSearch(event.target.value)}
+                placeholder="Search events"
+                spellCheck={false}
+              />
+            </label>
           </div>
           <div className="event-list">
             {filteredEvents.map((event) => (
