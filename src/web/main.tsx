@@ -487,9 +487,13 @@ function LiquidityAnalysisPanel({
             {analysis.chain.toUpperCase()} / {analysis.tokenAddress.slice(0, 8)}...{analysis.tokenAddress.slice(-6)}
           </strong>
         </div>
-        <span>
-          {labels.scanRange} {analysis.scannedFromBlock}-{analysis.scannedToBlock}
-        </span>
+        <div className="analysis-meta">
+          <span className={`analysis-status ${analysis.status}`}>{analysis.status}</span>
+          <span>{new Date(analysis.updatedAt).toLocaleTimeString()}</span>
+          <span>
+            {labels.scanRange} {analysis.scannedFromBlock}-{analysis.scannedToBlock}
+          </span>
+        </div>
       </header>
       <div className="liquidity-metrics">
         <SnapshotItem label={labels.pools} value={analysis.pools.length.toString()} />

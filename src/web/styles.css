@@ -390,10 +390,32 @@ h1 {
   font-size: 14px;
 }
 
-.liquidity-panel header > span {
+.analysis-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.analysis-meta > span {
   color: #8d9c94;
   font-size: 12px;
   text-align: right;
+}
+
+.analysis-status {
+  border: 1px solid rgba(159, 242, 189, 0.18);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(159, 242, 189, 0.08);
+  color: #c7f8d7;
+  text-transform: uppercase;
+}
+
+.analysis-status.degraded {
+  border-color: rgba(238, 179, 82, 0.2);
+  background: rgba(238, 179, 82, 0.08);
+  color: #eeb352;
 }
 
 .liquidity-metrics {
