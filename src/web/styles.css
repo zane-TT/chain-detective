@@ -323,13 +323,37 @@ h1 {
   gap: 8px;
 }
 
-.watch-list code {
+.watch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid rgba(159, 242, 189, 0.18);
   border-radius: 999px;
-  padding: 7px 10px;
+  padding: 5px 6px 5px 10px;
   background: rgba(159, 242, 189, 0.07);
   color: #c7f8d7;
+}
+
+.watch-list code {
+  color: inherit;
   font-size: 12px;
+}
+
+.watch-chip button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(159, 242, 189, 0.1);
+  color: #c7f8d7;
+  cursor: pointer;
+}
+
+.watch-chip button:focus-visible {
+  outline: 2px solid #9ff2bd;
+  outline-offset: 2px;
 }
 
 .liquidity-panel {

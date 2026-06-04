@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Check, Copy, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal, TokenLiquidityAnalysis } from "../shared/types";
 import {
@@ -48,6 +48,7 @@ function App() {
   const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
   const [eventSeverityFilter, setEventSeverityFilter] = useState<"all" | ChainEvent["severity"]>("all");
+  const [copiedAddress, setCopiedAddress] = useState("");
   const copy = getCopy(locale);
   const project = state.projects[0];
   const latestLiquidityAnalysis = state.liquidityAnalyses[0];
@@ -191,6 +192,17 @@ function App() {
     }
   }
 
+  async function copyWatchedAddress(address: string) {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      window.setTimeout(() => setCopiedAddress((current) => (current === address ? "" : current)), 1600);
+    } catch {
+      setWatchStatus("error");
+      setWatchMessage("Unable to copy address.");
+    }
+  }
+
   useEffect(() => {
     const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/stream`;
     const socket = new WebSocket(wsUrl);
@@ -307,9 +319,18 @@ function App() {
           <span>{tokenFormCopy.watched}</span>
           <div>
             {project.contracts.map((target) => (
-              <code key={target.id}>
-                {target.chain.toUpperCase()} / {target.address.slice(0, 8)}...{target.address.slice(-6)}
-              </code>
+              <span className="watch-chip" key={target.id}>
+                <code>
+                  {target.chain.toUpperCase()} / {target.address.slice(0, 8)}...{target.address.slice(-6)}
+                </code>
+                <button
+                  type="button"
+                  aria-label={`Copy ${target.chain.toUpperCase()} address`}
+                  onClick={() => void copyWatchedAddress(target.address)}
+                >
+                  {copiedAddress === target.address ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </span>
             ))}
           </div>
         </div>
