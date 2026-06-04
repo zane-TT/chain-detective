@@ -53,6 +53,7 @@ function App() {
   const copy = getCopy(locale);
   const project = state.projects[0];
   const latestLiquidityAnalysis = state.liquidityAnalyses[0];
+  const chainStatusItems = Object.entries(state.chains) as [ChainKey, DetectorState["status"]][];
   const tokenFormCopy =
     locale === "zh"
       ? {
@@ -274,7 +275,9 @@ function App() {
       </section>
 
       <section className="summary-grid">
-        <MetricCard label={copy.watchedChains} value="BSC + ETH" detail={copy.evmFirst} icon={<Waypoints />} />
+        <MetricCard label={copy.watchedChains} value={`${chainStatusItems.length} chains`} detail={copy.evmFirst} icon={<Waypoints />}>
+          <ChainStatusStrip chains={chainStatusItems} locale={locale} />
+        </MetricCard>
         <MetricCard label={copy.detectorMode} value={state.mode.toUpperCase()} detail={getStatusCopy(locale, state.status)} icon={<Activity />} />
         <MetricCard label={copy.currentProject} value={project.symbol} detail={project.name} icon={<Crosshair />} />
         <MetricCard
@@ -486,11 +489,13 @@ function MetricCard({
   value,
   detail,
   icon,
+  children,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <article className="metric-card">
@@ -498,7 +503,20 @@ function MetricCard({
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{detail}</small>
+      {children}
     </article>
+  );
+}
+
+function ChainStatusStrip({ chains, locale }: { chains: [ChainKey, DetectorState["status"]][]; locale: Locale }) {
+  return (
+    <div className="chain-status-strip">
+      {chains.map(([chain, status]) => (
+        <span className={`chain-status ${status}`} key={chain}>
+          {chain.toUpperCase()} / {getStatusCopy(locale, status)}
+        </span>
+      ))}
+    </div>
   );
 }
 
