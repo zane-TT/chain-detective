@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Check, Copy, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Check, Copy, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, RotateCcw, Search, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal, TokenLiquidityAnalysis } from "../shared/types";
 import {
@@ -116,6 +116,7 @@ function App() {
     info: "Info",
   } as const;
   const normalizedEventSearch = eventSearch.trim().toLowerCase();
+  const hasEventFilters = eventSeverityFilter !== "all" || Boolean(normalizedEventSearch);
 
   async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -409,6 +410,18 @@ function App() {
                 spellCheck={false}
               />
             </label>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Clear event filters"
+              disabled={!hasEventFilters}
+              onClick={() => {
+                setEventSeverityFilter("all");
+                setEventSearch("");
+              }}
+            >
+              <RotateCcw size={14} />
+            </button>
           </div>
           <div className="event-list">
             {filteredEvents.map((event) => (
