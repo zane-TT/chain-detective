@@ -15,6 +15,11 @@ const analyzeLiquiditySchema = z.object({
   chain: z.enum(["bsc", "ethereum"]),
   address: z.string(),
 });
+const eventsQuerySchema = z.object({
+  chain: z.enum(["bsc", "ethereum"]).optional(),
+  severity: z.enum(["info", "watch", "alert"]).optional(),
+  limit: z.coerce.number().int().positive().max(80).optional(),
+});
 
 await app.register(cors, {
   origin: true,
@@ -24,6 +29,16 @@ await app.register(websocket);
 app.get("/api/status", async () => detector.getState());
 
 app.get("/api/summary", async () => detector.getSummary());
+
+app.get("/api/events", async (request, reply) => {
+  const parsed = eventsQuerySchema.safeParse(request.query);
+
+  if (!parsed.success) {
+    return reply.code(400).send({ message: "Invalid events query." });
+  }
+
+  return { events: detector.getEvents(parsed.data) };
+});
 
 app.post("/api/watch-token", async (request, reply) => {
   const parsed = watchTokenSchema.safeParse(request.body);

@@ -110,6 +110,22 @@ test("summarizes watched targets and event severities", () => {
   assert.ok(summary.latestEventAt);
 });
 
+test("filters events by chain and severity with a bounded limit", () => {
+  const detector = new ChainDetector();
+
+  detector.addTokenTarget({
+    chain: "bsc",
+    address: "0x6666666666666666666666666666666666666666",
+    label: "Filter token",
+  });
+
+  const watchEvents = detector.getEvents({ chain: "bsc", severity: "watch", limit: 1 });
+
+  assert.equal(watchEvents.length, 1);
+  assert.equal(watchEvents[0].chain, "bsc");
+  assert.equal(watchEvents[0].severity, "watch");
+});
+
 test("analyzes V2 liquidity wallets and flags holders above threshold", async () => {
   const token = "0x1111111111111111111111111111111111111111";
   const pair = "0x2222222222222222222222222222222222222222";

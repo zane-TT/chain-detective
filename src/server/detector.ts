@@ -30,6 +30,11 @@ type AnalyzeTokenLiquidityInput = {
   chain: ChainKey;
   address: string;
 };
+type EventQuery = {
+  chain?: ChainKey;
+  severity?: ChainEvent["severity"];
+  limit?: number;
+};
 
 const pollIntervalMs = 8_000;
 const liquidityHolderThresholdPercent = 0.1;
@@ -240,6 +245,15 @@ export class ChainDetector {
       latestLiquidityAnalysisAt: this.state.liquidityAnalyses[0]?.updatedAt,
       updatedAt: this.state.updatedAt,
     };
+  }
+
+  getEvents(query: EventQuery = {}) {
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 80);
+
+    return this.state.events
+      .filter((event) => !query.chain || event.chain === query.chain)
+      .filter((event) => !query.severity || event.severity === query.severity)
+      .slice(0, limit);
   }
 
   addTokenTarget(input: AddTokenTargetInput) {
