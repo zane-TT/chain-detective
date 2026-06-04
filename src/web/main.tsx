@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, Crosshair, Languages, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, Search, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal, TokenLiquidityAnalysis } from "../shared/types";
 import {
@@ -47,6 +47,7 @@ function App() {
   const [watchMessage, setWatchMessage] = useState("");
   const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
+  const [eventSeverityFilter, setEventSeverityFilter] = useState<"all" | ChainEvent["severity"]>("all");
   const copy = getCopy(locale);
   const project = state.projects[0];
   const latestLiquidityAnalysis = state.liquidityAnalyses[0];
@@ -106,6 +107,12 @@ function App() {
           scanRange: "Scanned blocks",
           warnings: "Warnings",
         };
+  const eventFilterCopy = {
+    all: "All",
+    alert: "Alerts",
+    watch: "Watch",
+    info: "Info",
+  } as const;
 
   async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -207,6 +214,13 @@ function App() {
   const criticalEvents = useMemo(
     () => state.events.filter((event) => event.severity !== "info").slice(0, 4),
     [state.events],
+  );
+  const filteredEvents = useMemo(
+    () =>
+      state.events
+        .filter((event) => eventSeverityFilter === "all" || event.severity === eventSeverityFilter)
+        .slice(0, 12),
+    [eventSeverityFilter, state.events],
   );
 
   return (
@@ -341,9 +355,23 @@ function App() {
           </div>
         </Panel>
 
-        <Panel title={copy.liveEventStream} action={state.updatedAt.slice(11, 19)}>
+        <Panel title={copy.liveEventStream} action={`${filteredEvents.length} / ${state.events.length}`}>
+          <div className="event-filter" aria-label="Filter event severity">
+            <ListFilter size={16} />
+            {(["all", "alert", "watch", "info"] as const).map((severity) => (
+              <button
+                key={severity}
+                type="button"
+                className={eventSeverityFilter === severity ? "active" : ""}
+                aria-pressed={eventSeverityFilter === severity}
+                onClick={() => setEventSeverityFilter(severity)}
+              >
+                {eventFilterCopy[severity]}
+              </button>
+            ))}
+          </div>
           <div className="event-list">
-            {state.events.slice(0, 12).map((event) => (
+            {filteredEvents.map((event) => (
               <EventRow key={event.id} event={event} locale={locale} />
             ))}
           </div>

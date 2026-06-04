@@ -619,6 +619,35 @@ h1 {
   padding-right: 4px;
 }
 
+.event-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: #9ff2bd;
+}
+
+.event-filter button {
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #91a098;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.event-filter button.active {
+  border-color: rgba(159, 242, 189, 0.24);
+  background: rgba(159, 242, 189, 0.12);
+  color: #eef5ef;
+}
+
+.event-filter button:focus-visible {
+  outline: 2px solid #9ff2bd;
+  outline-offset: 2px;
+}
+
 .event-row {
   display: grid;
   grid-template-columns: auto 1fr;
