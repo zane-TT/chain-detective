@@ -293,6 +293,12 @@ h1 {
   color: #c7f8d7;
 }
 
+.watch-form button.ghost {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #aebcb4;
+}
+
 .watch-form button:disabled {
   cursor: wait;
   opacity: 0.72;

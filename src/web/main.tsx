@@ -67,6 +67,7 @@ function App() {
           success: "已加入监控列表",
           empty: "请输入代币合约地址",
           watched: "已监控地址",
+          reset: "清空",
         }
       : {
           title: "Add token watch",
@@ -80,6 +81,7 @@ function App() {
           success: "Added to watchlist",
           empty: "Enter a token contract address",
           watched: "Watched addresses",
+          reset: "Clear form",
         };
   const liquidityCopy =
     locale === "zh"
@@ -117,6 +119,7 @@ function App() {
   } as const;
   const normalizedEventSearch = eventSearch.trim().toLowerCase();
   const hasEventFilters = eventSeverityFilter !== "all" || Boolean(normalizedEventSearch);
+  const hasTokenDraft = Boolean(tokenAddress.trim() || tokenLabel.trim());
 
   async function addTokenWatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -321,6 +324,22 @@ function App() {
             <button type="button" className="secondary" disabled={analysisStatus === "loading"} onClick={analyzeLiquidity}>
               {analysisStatus === "loading" ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
               {analysisStatus === "loading" ? liquidityCopy.analyzing : liquidityCopy.analyze}
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              disabled={!hasTokenDraft}
+              onClick={() => {
+                setTokenAddress("");
+                setTokenLabel("");
+                setWatchStatus("idle");
+                setWatchMessage("");
+                setAnalysisStatus("idle");
+                setAnalysisMessage("");
+              }}
+            >
+              <RotateCcw size={18} />
+              {tokenFormCopy.reset}
             </button>
           </div>
         </form>
