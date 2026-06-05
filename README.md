@@ -9,13 +9,6 @@ The first MVP intentionally stays tiny:
 - show one project radar row and one investigation detail view;
 - keep the architecture ready for Alpha hooks, pool analyzers, and holder tracking.
 
-## Tech Stack
-
-- Web: React + Vite + TypeScript
-- Realtime API: Node.js + Fastify + WebSocket
-- Chain access: viem
-- First chain family: EVM/Solidity contracts
-- Later adapters: Solana/Rust, Move chains
 
 ## Run
 
