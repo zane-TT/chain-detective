@@ -388,9 +388,13 @@ function App() {
             </button>
           </div>
           <div className="event-list">
-            {filteredEvents.map((event) => (
-              <EventRow key={event.id} event={event} locale={locale} />
-            ))}
+            {filteredEvents.length > 0 ? (
+              filteredEvents.map((event) => (
+                <EventRow key={event.id} event={event} locale={locale} />
+              ))
+            ) : (
+              <div className="event-empty">{eventFilterCopy.empty}</div>
+            )}
           </div>
         </Panel>
 
