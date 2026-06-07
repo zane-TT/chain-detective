@@ -91,7 +91,7 @@ function App() {
       const payload = (await response.json()) as { message?: string; state?: DetectorState };
 
       if (!response.ok || !payload.state) {
-        throw new Error(payload.message ?? "Unable to add token address.");
+        throw new Error(payload.message ?? tokenFormCopy.addError);
       }
 
       setState(payload.state);
@@ -101,7 +101,7 @@ function App() {
       setWatchMessage(tokenFormCopy.success);
     } catch (error) {
       setWatchStatus("error");
-      setWatchMessage(error instanceof Error ? error.message : "Unable to add token address.");
+      setWatchMessage(error instanceof Error ? error.message : tokenFormCopy.addError);
     }
   }
 
@@ -129,7 +129,7 @@ function App() {
       const payload = (await response.json()) as { message?: string; state?: DetectorState };
 
       if (!response.ok || !payload.state) {
-        throw new Error(payload.message ?? "Unable to analyze token liquidity.");
+        throw new Error(payload.message ?? liquidityCopy.analyzeError);
       }
 
       setState(payload.state);
@@ -137,7 +137,7 @@ function App() {
       setAnalysisMessage(liquidityCopy.analyzeSuccess);
     } catch (error) {
       setAnalysisStatus("error");
-      setAnalysisMessage(error instanceof Error ? error.message : "Unable to analyze token liquidity.");
+      setAnalysisMessage(error instanceof Error ? error.message : liquidityCopy.analyzeError);
     }
   }
 
@@ -148,7 +148,7 @@ function App() {
       window.setTimeout(() => setCopiedAddress((current) => (current === address ? "" : current)), 1600);
     } catch {
       setWatchStatus("error");
-      setWatchMessage("Unable to copy address.");
+      setWatchMessage(tokenFormCopy.copyError);
     }
   }
 
@@ -300,7 +300,7 @@ function App() {
                 </code>
                 <button
                   type="button"
-                  aria-label={`Copy ${target.chain.toUpperCase()} address`}
+                  aria-label={`${tokenFormCopy.copyAddress}: ${target.chain.toUpperCase()} ${target.address}`}
                   onClick={() => void copyWatchedAddress(target.address)}
                 >
                   {copiedAddress === target.address ? <Check size={14} /> : <Copy size={14} />}
