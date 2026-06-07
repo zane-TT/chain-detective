@@ -5,12 +5,15 @@ import { nexProject, seedEvents } from "../shared/seedData";
 import type { ChainEvent, ChainKey, DetectorState, LifecycleSignal, TokenLiquidityAnalysis } from "../shared/types";
 import {
   getCopy,
+  getEventFilterCopy,
   getEventCopy,
+  getLiquidityCopy,
   getMechanismCopy,
   getPhraseCopy,
   getPoolStatusCopy,
   getSignalCopy,
   getStatusCopy,
+  getWatchFormCopy,
   localeNames,
   localeStorageKey,
   locales,
@@ -54,94 +57,9 @@ function App() {
   const project = state.projects[0];
   const latestLiquidityAnalysis = state.liquidityAnalyses[0];
   const chainStatusItems = Object.entries(state.chains) as [ChainKey, DetectorState["status"]][];
-  const tokenFormCopy =
-    locale === "zh"
-      ? {
-          title: "添加代币监控",
-          chain: "链",
-          address: "代币合约地址",
-          label: "备注",
-          labelPlaceholder: "例如 NEX BSC token",
-          addressPlaceholder: "0x...",
-          submit: "加入监控",
-          saving: "添加中",
-          success: "已加入监控列表",
-          empty: "请输入代币合约地址",
-          watched: "已监控地址",
-          reset: "清空",
-        }
-      : {
-          title: "Add token watch",
-          chain: "Chain",
-          address: "Token contract address",
-          label: "Label",
-          labelPlaceholder: "e.g. NEX BSC token",
-          addressPlaceholder: "0x...",
-          submit: "Add watch",
-          saving: "Adding",
-          success: "Added to watchlist",
-          empty: "Enter a token contract address",
-          watched: "Watched addresses",
-          reset: "Clear form",
-        };
-  const liquidityCopy =
-    locale === "zh"
-      ? {
-          analyze: "分析流动池钱包",
-          analyzing: "分析中",
-          analyzeSuccess: "流动池钱包分析完成",
-          analysisTitle: "流动池钱包画像",
-          pools: "池子",
-          wallets: "LP 钱包",
-          relations: "关联关系",
-          majorHolder: "持仓 >= 0.1%",
-          noAnalysis: "输入代币地址后点击分析。",
-          scanRange: "扫描区块",
-          warnings: "注意",
-          wallet: "钱包",
-          share: "占比",
-          statusComplete: "完整",
-          statusDegraded: "部分完成",
-        }
-      : {
-          analyze: "Analyze LP wallets",
-          analyzing: "Analyzing",
-          analyzeSuccess: "Liquidity wallet analysis complete",
-          analysisTitle: "Liquidity wallet profile",
-          pools: "Pools",
-          wallets: "LP wallets",
-          relations: "Relations",
-          majorHolder: "Holding >= 0.1%",
-          noAnalysis: "Enter a token address, then run analysis.",
-          scanRange: "Scanned blocks",
-          warnings: "Warnings",
-          wallet: "Wallet",
-          share: "Share",
-          statusComplete: "Complete",
-          statusDegraded: "Degraded",
-        };
-  const eventFilterCopy =
-    locale === "zh"
-      ? {
-          all: "全部",
-          alert: "警报",
-          watch: "关注",
-          info: "信息",
-          aria: "筛选事件级别",
-          search: "搜索事件",
-          clear: "清空事件筛选",
-          chains: "条链",
-        }
-      : {
-          all: "All",
-          alert: "Alerts",
-          watch: "Watch",
-          info: "Info",
-          aria: "Filter event severity",
-          search: "Search events",
-          clear: "Clear event filters",
-          chains: "chains",
-        };
+  const tokenFormCopy = getWatchFormCopy(locale);
+  const liquidityCopy = getLiquidityCopy(locale);
+  const eventFilterCopy = getEventFilterCopy(locale);
   const normalizedEventSearch = eventSearch.trim().toLowerCase();
   const hasEventFilters = eventSeverityFilter !== "all" || Boolean(normalizedEventSearch);
   const hasTokenDraft = Boolean(tokenAddress.trim() || tokenLabel.trim());
