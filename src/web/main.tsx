@@ -98,6 +98,10 @@ function App() {
           noAnalysis: "输入代币地址后点击分析。",
           scanRange: "扫描区块",
           warnings: "注意",
+          wallet: "钱包",
+          share: "占比",
+          statusComplete: "完整",
+          statusDegraded: "部分完成",
         }
       : {
           analyze: "Analyze LP wallets",
@@ -111,13 +115,33 @@ function App() {
           noAnalysis: "Enter a token address, then run analysis.",
           scanRange: "Scanned blocks",
           warnings: "Warnings",
+          wallet: "Wallet",
+          share: "Share",
+          statusComplete: "Complete",
+          statusDegraded: "Degraded",
         };
-  const eventFilterCopy = {
-    all: "All",
-    alert: "Alerts",
-    watch: "Watch",
-    info: "Info",
-  } as const;
+  const eventFilterCopy =
+    locale === "zh"
+      ? {
+          all: "全部",
+          alert: "警报",
+          watch: "关注",
+          info: "信息",
+          aria: "筛选事件级别",
+          search: "搜索事件",
+          clear: "清空事件筛选",
+          chains: "条链",
+        }
+      : {
+          all: "All",
+          alert: "Alerts",
+          watch: "Watch",
+          info: "Info",
+          aria: "Filter event severity",
+          search: "Search events",
+          clear: "Clear event filters",
+          chains: "chains",
+        };
   const normalizedEventSearch = eventSearch.trim().toLowerCase();
   const hasEventFilters = eventSeverityFilter !== "all" || Boolean(normalizedEventSearch);
   const hasTokenDraft = Boolean(tokenAddress.trim() || tokenLabel.trim());
@@ -275,7 +299,7 @@ function App() {
       </section>
 
       <section className="summary-grid">
-        <MetricCard label={copy.watchedChains} value={`${chainStatusItems.length} chains`} detail={copy.evmFirst} icon={<Waypoints />}>
+        <MetricCard label={copy.watchedChains} value={`${chainStatusItems.length} ${eventFilterCopy.chains}`} detail={copy.evmFirst} icon={<Waypoints />}>
           <ChainStatusStrip chains={chainStatusItems} locale={locale} />
         </MetricCard>
         <MetricCard label={copy.detectorMode} value={state.mode.toUpperCase()} detail={getStatusCopy(locale, state.status)} icon={<Activity />} />
@@ -410,7 +434,7 @@ function App() {
         </Panel>
 
         <Panel title={copy.liveEventStream} action={`${filteredEvents.length} / ${state.events.length}`}>
-          <div className="event-filter" aria-label="Filter event severity">
+          <div className="event-filter" aria-label={eventFilterCopy.aria}>
             <ListFilter size={16} />
             {(["all", "alert", "watch", "info"] as const).map((severity) => (
               <button
@@ -428,14 +452,14 @@ function App() {
               <input
                 value={eventSearch}
                 onChange={(event) => setEventSearch(event.target.value)}
-                placeholder="Search events"
+                placeholder={eventFilterCopy.search}
                 spellCheck={false}
               />
             </label>
             <button
               type="button"
               className="icon-button"
-              aria-label="Clear event filters"
+              aria-label={eventFilterCopy.clear}
               disabled={!hasEventFilters}
               onClick={() => {
                 setEventSeverityFilter("all");
@@ -534,6 +558,10 @@ function LiquidityAnalysisPanel({
     noAnalysis: string;
     scanRange: string;
     warnings: string;
+    wallet: string;
+    share: string;
+    statusComplete: string;
+    statusDegraded: string;
   };
 }) {
   if (!analysis) {
@@ -557,7 +585,9 @@ function LiquidityAnalysisPanel({
           </strong>
         </div>
         <div className="analysis-meta">
-          <span className={`analysis-status ${analysis.status}`}>{analysis.status}</span>
+          <span className={`analysis-status ${analysis.status}`}>
+            {analysis.status === "complete" ? labels.statusComplete : labels.statusDegraded}
+          </span>
           <span>{new Date(analysis.updatedAt).toLocaleTimeString()}</span>
           <span>
             {labels.scanRange} {analysis.scannedFromBlock}-{analysis.scannedToBlock}
@@ -572,10 +602,10 @@ function LiquidityAnalysisPanel({
       </div>
       <div className="liquidity-table">
         <div className="liquidity-head">
-          <span>Wallet</span>
-          <span>Share</span>
-          <span>Pools</span>
-          <span>Relations</span>
+          <span>{labels.wallet}</span>
+          <span>{labels.share}</span>
+          <span>{labels.pools}</span>
+          <span>{labels.relations}</span>
         </div>
         {analysis.wallets.slice(0, 8).map((wallet) => (
           <div className={wallet.isMajorHolder ? "liquidity-row major" : "liquidity-row"} key={wallet.address}>
