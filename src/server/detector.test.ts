@@ -183,7 +183,7 @@ test("analyzes V2 liquidity wallets and flags holders above threshold", async ()
         from: hash === txA ? walletA : walletB,
       }),
       readContract: async ({ address, functionName, args }) => {
-        if (functionName === "getPair" && address === "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73") {
+        if (functionName === "getPair" && address === "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73") {
           return pair;
         }
         if (functionName === "getPair") {

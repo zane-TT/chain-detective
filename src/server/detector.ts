@@ -109,7 +109,7 @@ const v2Factories: Record<ChainKey, DexFactory[]> = {
   bsc: [
     {
       name: "PancakeSwap V2",
-      address: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
+      address: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
       quoteTokens: [
         "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
         "0x55d398326f99059fF775485246999027B3197955",
