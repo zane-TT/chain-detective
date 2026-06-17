@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Activity, AlertTriangle, Check, Copy, Crosshair, Languages, ListFilter, Loader2, Plus, Radio, RotateCcw, Search, ShieldCheck, Waypoints } from "lucide-react";
 import { nexProject, seedEvents } from "../shared/seedData";
@@ -22,7 +22,7 @@ import {
 } from "./i18n";
 import "./styles.css";
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 
 const initialState: DetectorState = {
   status: "demo",
@@ -54,9 +54,13 @@ function App() {
   const [eventSearch, setEventSearch] = useState("");
   const [copiedAddress, setCopiedAddress] = useState("");
   const copy = getCopy(locale);
-  const project = state.projects[0];
-  const latestLiquidityAnalysis = state.liquidityAnalyses[0];
-  const chainStatusItems = Object.entries(state.chains) as [ChainKey, DetectorState["status"]][];
+  const projects = Array.isArray(state.projects) && state.projects.length > 0 ? state.projects : initialState.projects;
+  const events = Array.isArray(state.events) ? state.events : [];
+  const liquidityAnalyses = Array.isArray(state.liquidityAnalyses) ? state.liquidityAnalyses : [];
+  const chains = state.chains ?? initialState.chains;
+  const project = projects[0];
+  const latestLiquidityAnalysis = liquidityAnalyses[0];
+  const chainStatusItems = Object.entries(chains) as [ChainKey, DetectorState["status"]][];
   const tokenFormCopy = getWatchFormCopy(locale);
   const liquidityCopy = getLiquidityCopy(locale);
   const eventFilterCopy = getEventFilterCopy(locale);
@@ -160,8 +164,14 @@ function App() {
     socket.onclose = () => setConnected(false);
     socket.onerror = () => setConnected(false);
     socket.onmessage = (message) => {
-      const payload = JSON.parse(message.data) as { state: DetectorState };
-      setState(payload.state);
+      try {
+        const payload = JSON.parse(message.data) as { state?: DetectorState };
+        if (payload.state) {
+          setState(payload.state);
+        }
+      } catch {
+        setConnected(false);
+      }
     };
 
     return () => socket.close();
@@ -173,12 +183,12 @@ function App() {
   }, [locale]);
 
   const criticalEvents = useMemo(
-    () => state.events.filter((event) => event.severity !== "info").slice(0, 4),
-    [state.events],
+    () => events.filter((event) => event.severity !== "info").slice(0, 4),
+    [events],
   );
   const filteredEvents = useMemo(
     () =>
-      state.events
+      events
         .filter((event) => eventSeverityFilter === "all" || event.severity === eventSeverityFilter)
         .filter((event) => {
           if (!normalizedEventSearch) return true;
@@ -189,7 +199,7 @@ function App() {
             .includes(normalizedEventSearch);
         })
         .slice(0, 12),
-    [eventSeverityFilter, normalizedEventSearch, state.events],
+    [eventSeverityFilter, normalizedEventSearch, events],
   );
 
   return (
@@ -313,7 +323,7 @@ function App() {
       </section>
 
       <section className="workspace-grid">
-        <Panel title={copy.alphaRadar} action={`${state.events.length} ${copy.events}`}>
+        <Panel title={copy.alphaRadar} action={`${events.length} ${copy.events}`}>
           <div className="radar-table">
             <div className="radar-head">
               <span>{copy.project}</span>
@@ -351,7 +361,7 @@ function App() {
           </div>
         </Panel>
 
-        <Panel title={copy.liveEventStream} action={`${filteredEvents.length} / ${state.events.length}`}>
+        <Panel title={copy.liveEventStream} action={`${filteredEvents.length} / ${events.length}`}>
           <div className="event-filter" aria-label={eventFilterCopy.aria}>
             <ListFilter size={16} />
             {(["all", "alert", "watch", "info"] as const).map((severity) => (
@@ -495,7 +505,13 @@ function LiquidityAnalysisPanel({
     );
   }
 
-  const majorWallets = analysis.wallets.filter((wallet) => wallet.isMajorHolder);
+  const wallets = Array.isArray(analysis.wallets) ? analysis.wallets : [];
+  const pools = Array.isArray(analysis.pools) ? analysis.pools : [];
+  const relations = Array.isArray(analysis.relations) ? analysis.relations : [];
+  const warnings = Array.isArray(analysis.warnings) ? analysis.warnings : [];
+  const tokenAddress = typeof analysis.tokenAddress === "string" ? analysis.tokenAddress : "0x";
+  const chainLabel = typeof analysis.chain === "string" ? analysis.chain.toUpperCase() : "";
+  const majorWallets = wallets.filter((wallet) => wallet.isMajorHolder);
 
   return (
     <section className="liquidity-panel">
@@ -503,7 +519,7 @@ function LiquidityAnalysisPanel({
         <div>
           <span className="eyebrow">{labels.analysisTitle}</span>
           <strong>
-            {analysis.chain.toUpperCase()} / {analysis.tokenAddress.slice(0, 8)}...{analysis.tokenAddress.slice(-6)}
+            {chainLabel} / {tokenAddress.slice(0, 8)}...{tokenAddress.slice(-6)}
           </strong>
         </div>
         <div className="analysis-meta">
@@ -517,9 +533,9 @@ function LiquidityAnalysisPanel({
         </div>
       </header>
       <div className="liquidity-metrics">
-        <SnapshotItem label={labels.pools} value={analysis.pools.length.toString()} />
-        <SnapshotItem label={labels.wallets} value={analysis.wallets.length.toString()} />
-        <SnapshotItem label={labels.relations} value={analysis.relations.length.toString()} />
+        <SnapshotItem label={labels.pools} value={pools.length.toString()} />
+        <SnapshotItem label={labels.wallets} value={wallets.length.toString()} />
+        <SnapshotItem label={labels.relations} value={relations.length.toString()} />
         <SnapshotItem label={labels.majorHolder} value={majorWallets.length.toString()} />
       </div>
       <div className="liquidity-table">
@@ -529,26 +545,37 @@ function LiquidityAnalysisPanel({
           <span>{labels.pools}</span>
           <span>{labels.relations}</span>
         </div>
-        {analysis.wallets.slice(0, 8).map((wallet) => (
-          <div className={wallet.isMajorHolder ? "liquidity-row major" : "liquidity-row"} key={wallet.address}>
-            <code>{wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}</code>
-            <span>{wallet.totalSupplySharePercent.toFixed(4)}%</span>
-            <span>{wallet.poolAddresses.length}</span>
-            <span>{wallet.relations.length}</span>
-          </div>
-        ))}
+        {wallets.slice(0, 8).map((wallet) => {
+          const walletAddress = typeof wallet.address === "string" ? wallet.address : "0x";
+          const share = Number.isFinite(wallet.totalSupplySharePercent) ? wallet.totalSupplySharePercent : 0;
+          const poolAddresses = Array.isArray(wallet.poolAddresses) ? wallet.poolAddresses : [];
+          const walletRelations = Array.isArray(wallet.relations) ? wallet.relations : [];
+
+          return (
+            <div className={wallet.isMajorHolder ? "liquidity-row major" : "liquidity-row"} key={walletAddress}>
+              <code>{walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</code>
+              <span>{share.toFixed(4)}%</span>
+              <span>{poolAddresses.length}</span>
+              <span>{walletRelations.length}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="pool-chip-row">
-        {analysis.pools.slice(0, 6).map((pool) => (
-          <code key={pool.pairAddress}>
-            {pool.dex} / {pool.pairAddress.slice(0, 8)}...{pool.pairAddress.slice(-6)} / {pool.providerCount}
-          </code>
-        ))}
+        {pools.slice(0, 6).map((pool) => {
+          const pairAddress = typeof pool.pairAddress === "string" ? pool.pairAddress : "0x";
+
+          return (
+            <code key={pairAddress}>
+              {pool.dex} / {pairAddress.slice(0, 8)}...{pairAddress.slice(-6)} / {pool.providerCount}
+            </code>
+          );
+        })}
       </div>
-      {analysis.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className="analysis-warnings">
           <span>{labels.warnings}</span>
-          {analysis.warnings.slice(0, 3).map((warning) => (
+          {warnings.slice(0, 3).map((warning) => (
             <p key={warning}>{warning}</p>
           ))}
         </div>
@@ -661,8 +688,37 @@ function SnapshotItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Chain Detective render error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="app-shell">
+          <section className="liquidity-panel empty">
+            <span className="eyebrow">Chain Detective</span>
+            <p>页面渲染出错，请刷新后重试。</p>
+          </section>
+        </main>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 );
