@@ -193,6 +193,7 @@ export class ChainDetector {
   private listeners = new Set<Listener>();
   private timers: NodeJS.Timeout[] = [];
   private latestBlocks = new Map<ChainKey, bigint>();
+  private clients = new Map<ChainKey, ChainClient>();
 
   constructor(options: ChainDetectorOptions = {}) {
     this.chainConfigs = options.chainConfigs ?? chains;
@@ -330,6 +331,7 @@ export class ChainDetector {
     };
 
     this.pushEvent(event);
+    this.scanLatestKnownBlock(target);
     return target;
   }
 
@@ -465,6 +467,7 @@ export class ChainDetector {
     if (!rpcUrl) return;
 
     const client = this.createClient(chain, rpcUrl);
+    this.clients.set(chain.key, client);
 
     this.setChainStatus(chain.key, "connecting");
 
@@ -542,6 +545,31 @@ export class ChainDetector {
     for (const log of logs) {
       this.pushEvent(this.toEvent(target, log));
     }
+  }
+
+  private scanLatestKnownBlock(target: WatchTarget) {
+    const client = this.clients.get(target.chain);
+    const latestBlock = this.latestBlocks.get(target.chain);
+
+    if (!client || latestBlock === undefined) {
+      return;
+    }
+
+    void this.scanTargetLogs(client, target, latestBlock, latestBlock).catch((error) => {
+      this.setChainStatus(target.chain, "degraded");
+      this.pushEvent({
+        id: `watch-scan-error-${target.chain}-${target.address.toLowerCase()}-${Date.now()}`,
+        projectId: target.projectId,
+        chain: target.chain,
+        severity: "alert",
+        source: "detector",
+        signal: "Unknown Mechanism",
+        title: `${target.label} immediate scan failed`,
+        detail: this.errorMessage(error),
+        address: target.address,
+        timestamp: new Date().toISOString(),
+      });
+    });
   }
 
   private async findV2Pools(
