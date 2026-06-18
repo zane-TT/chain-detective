@@ -40,7 +40,11 @@ const pollIntervalMs = 8_000;
 const liquidityHolderThresholdPercent = 0.1;
 const defaultLiquidityScanBlocks = 250_000n;
 const defaultLogChunkSize = 20_000n;
+const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
+const transferEvent = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+);
 const pairCreatedEvent = parseAbiItem(
   "event PairCreated(address indexed token0, address indexed token1, address pair, uint256)",
 );
@@ -296,9 +300,7 @@ export class ChainDetector {
       label,
       address,
       kind: "token",
-      topics: [
-        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-      ],
+      topics: [transferTopic],
     };
 
     this.state = {
@@ -521,11 +523,16 @@ export class ChainDetector {
     const targets = this.state.projects.flatMap((project) =>
       project.contracts.filter((target) => target.chain === chain.key),
     );
-    await Promise.all(
+    const results = await Promise.allSettled(
       targets.map((target) =>
         this.scanTargetLogs(client, target, previous + 1n, blockNumber),
       ),
     );
+
+    const failedResult = results.find((result) => result.status === "rejected");
+    if (failedResult?.status === "rejected") {
+      throw failedResult.reason;
+    }
   }
 
   private async scanTargetLogs(
@@ -538,7 +545,7 @@ export class ChainDetector {
       address: target.address,
       fromBlock,
       toBlock,
-      event: undefined,
+      event: this.getTargetLogEvent(target),
       args: undefined,
     });
 
@@ -927,6 +934,10 @@ export class ChainDetector {
 
   private errorMessage(error: unknown) {
     return error instanceof Error ? error.message : "Unknown error";
+  }
+
+  private getTargetLogEvent(target: WatchTarget) {
+    return target.topics?.includes(transferTopic) ? transferEvent : undefined;
   }
 
   private toEvent(target: WatchTarget, log: Log): ChainEvent {
