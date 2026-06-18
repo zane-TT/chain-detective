@@ -32,13 +32,14 @@ test("monitors the requested token address and emits Transfer matches", async ()
     pollIntervalMs: 10,
     createClient: () => ({
       getBlockNumber: async () => blockNumber++,
-      getLogs: async ({ address, fromBlock, toBlock }) => {
+      getLogs: async ({ address, fromBlock, toBlock, event }) => {
         scannedAddresses.push(address.toLowerCase());
 
         if (address.toLowerCase() !== watchedAddress) {
           return [];
         }
 
+        assert.equal(event?.name, "Transfer");
         assert.equal(fromBlock, 101n);
         assert.equal(toBlock, 101n);
 
@@ -237,7 +238,68 @@ test("monitors an Ethereum contract address on the matching chain only", async (
   assert.ok(!scanned.some((item) => item.chain === "bsc" && item.address === ethereumAddress));
 });
 
-test("emits informational log matches for watched EVM contract logs without Transfer topic", async () => {
+test("continues monitoring requested EVM contracts when another target scan fails", async () => {
+  const token = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const txHash = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const detector = new ChainDetector({
+    chainConfigs: [testChain],
+    pollIntervalMs: 60_000,
+    initialLatestBlocks: {
+      bsc: 300n,
+    },
+    createClient: () => ({
+      getBlockNumber: async () => 301n,
+      getLogs: async ({ address, event }) => {
+        if (address.toLowerCase() !== token) {
+          throw new Error("seed target RPC timed out");
+        }
+
+        assert.equal(event?.name, "Transfer");
+
+        return [
+          {
+            address,
+            blockNumber: 301n,
+            transactionHash: txHash,
+            logIndex: 0,
+            topics: [transferTopic],
+            data: "0x",
+            blockHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            transactionIndex: 0,
+            removed: false,
+          } satisfies Log,
+        ];
+      },
+    }),
+  });
+  detectors.push(detector);
+
+  detector.addTokenTarget({
+    chain: "bsc",
+    address: token,
+    label: "Requested resilient token",
+  });
+
+  const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for resilient Transfer event.")), 500);
+    const unsubscribe = detector.subscribe((_state, event) => {
+      if (event?.txHash === txHash) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(event);
+      }
+    });
+  });
+
+  detector.start();
+
+  const event = await matchedEvent;
+
+  assert.equal(event.signal, "Transfer");
+  assert.equal(event.severity, "watch");
+});
+
+test("emits informational log matches for watched EVM targets without topic filters", async () => {
   const token = "0x9999999999999999999999999999999999999999";
   const txHash = "0x9999999999999999999999999999999999999999999999999999999999999999";
   const detector = new ChainDetector({
@@ -248,7 +310,9 @@ test("emits informational log matches for watched EVM contract logs without Tran
     },
     createClient: () => ({
       getBlockNumber: async () => 201n,
-      getLogs: async ({ address }) => {
+      getLogs: async ({ address, event }) => {
+        assert.equal(event, undefined);
+
         if (address.toLowerCase() !== token) {
           return [];
         }
@@ -271,10 +335,13 @@ test("emits informational log matches for watched EVM contract logs without Tran
   });
   detectors.push(detector);
 
-  detector.addTokenTarget({
+  detector.getState().projects[0].contracts.push({
+    id: "generic-log-target",
+    projectId: "nexus-nex",
     chain: "bsc",
+    label: "Generic log target",
     address: token,
-    label: "Generic log token",
+    kind: "hook",
   });
 
   const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
