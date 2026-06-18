@@ -91,6 +91,212 @@ test("monitors the requested token address and emits Transfer matches", async ()
   assert.ok(scannedAddresses.includes(watchedAddress));
 });
 
+test("immediately scans an EVM token added after live polling has connected", async () => {
+  const token = "0x7777777777777777777777777777777777777777";
+  const txHash = "0x7777777777777777777777777777777777777777777777777777777777777777";
+  const scannedRanges: Array<{ address: string; fromBlock: bigint; toBlock: bigint }> = [];
+  const detector = new ChainDetector({
+    chainConfigs: [testChain],
+    pollIntervalMs: 60_000,
+    createClient: () => ({
+      getBlockNumber: async () => 500n,
+      getLogs: async ({ address, fromBlock, toBlock }) => {
+        scannedRanges.push({ address: address.toLowerCase(), fromBlock, toBlock });
+
+        if (address.toLowerCase() !== token) {
+          return [];
+        }
+
+        return [
+          {
+            address,
+            blockNumber: 500n,
+            transactionHash: txHash,
+            logIndex: 2,
+            topics: [transferTopic],
+            data: "0x",
+            blockHash: "0x7777777777777777777777777777777777777777777777777777777777777777",
+            transactionIndex: 0,
+            removed: false,
+          } satisfies Log,
+        ];
+      },
+    }),
+  });
+  detectors.push(detector);
+
+  const connected = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for live polling.")), 500);
+    const unsubscribe = detector.subscribe((state) => {
+      if (state.chains.bsc === "live") {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+
+  detector.start();
+  await connected;
+
+  const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for immediate watched Transfer event.")), 500);
+    const unsubscribe = detector.subscribe((_state, event) => {
+      if (event?.source === "rpc" && event.txHash === txHash) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(event);
+      }
+    });
+  });
+
+  detector.addTokenTarget({
+    chain: "bsc",
+    address: token,
+    label: "Late token",
+  });
+
+  const event = await matchedEvent;
+
+  assert.equal(event.signal, "Transfer");
+  assert.equal(event.severity, "watch");
+  assert.equal(event.blockNumber, "500");
+  assert.deepEqual(scannedRanges.at(-1), { address: token, fromBlock: 500n, toBlock: 500n });
+});
+
+test("monitors an Ethereum contract address on the matching chain only", async () => {
+  const ethereumAddress = "0x8888888888888888888888888888888888888888";
+  const txHash = "0x8888888888888888888888888888888888888888888888888888888888888888";
+  const scanned: Array<{ chain: string; address: string }> = [];
+  const ethereumChain: ChainConfig = {
+    key: "ethereum",
+    label: "Ethereum",
+    chainId: 1,
+    rpcEnv: "TEST_ETH_RPC_URL",
+    publicRpcUrl: "mock://ethereum",
+    nativeSymbol: "ETH",
+  };
+  const detector = new ChainDetector({
+    chainConfigs: [testChain, ethereumChain],
+    pollIntervalMs: 10,
+    initialLatestBlocks: {
+      ethereum: 1000n,
+      bsc: 1000n,
+    },
+    createClient: (chain) => ({
+      getBlockNumber: async () => 1001n,
+      getLogs: async ({ address }) => {
+        scanned.push({ chain: chain.key, address: address.toLowerCase() });
+
+        if (chain.key !== "ethereum" || address.toLowerCase() !== ethereumAddress) {
+          return [];
+        }
+
+        return [
+          {
+            address,
+            blockNumber: 1001n,
+            transactionHash: txHash,
+            logIndex: 0,
+            topics: [transferTopic],
+            data: "0x",
+            blockHash: "0x8888888888888888888888888888888888888888888888888888888888888888",
+            transactionIndex: 0,
+            removed: false,
+          } satisfies Log,
+        ];
+      },
+    }),
+  });
+  detectors.push(detector);
+
+  detector.addTokenTarget({
+    chain: "ethereum",
+    address: ethereumAddress,
+    label: "Ethereum token",
+  });
+
+  const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for Ethereum Transfer event.")), 500);
+    const unsubscribe = detector.subscribe((_state, event) => {
+      if (event?.txHash === txHash) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(event);
+      }
+    });
+  });
+
+  detector.start();
+
+  const event = await matchedEvent;
+
+  assert.equal(event.chain, "ethereum");
+  assert.equal(event.signal, "Transfer");
+  assert.ok(scanned.some((item) => item.chain === "ethereum" && item.address === ethereumAddress));
+  assert.ok(!scanned.some((item) => item.chain === "bsc" && item.address === ethereumAddress));
+});
+
+test("emits informational log matches for watched EVM contract logs without Transfer topic", async () => {
+  const token = "0x9999999999999999999999999999999999999999";
+  const txHash = "0x9999999999999999999999999999999999999999999999999999999999999999";
+  const detector = new ChainDetector({
+    chainConfigs: [testChain],
+    pollIntervalMs: 10,
+    initialLatestBlocks: {
+      bsc: 200n,
+    },
+    createClient: () => ({
+      getBlockNumber: async () => 201n,
+      getLogs: async ({ address }) => {
+        if (address.toLowerCase() !== token) {
+          return [];
+        }
+
+        return [
+          {
+            address,
+            blockNumber: 201n,
+            transactionHash: txHash,
+            logIndex: 3,
+            topics: ["0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+            data: "0x",
+            blockHash: "0x9999999999999999999999999999999999999999999999999999999999999999",
+            transactionIndex: 0,
+            removed: false,
+          } satisfies Log,
+        ];
+      },
+    }),
+  });
+  detectors.push(detector);
+
+  detector.addTokenTarget({
+    chain: "bsc",
+    address: token,
+    label: "Generic log token",
+  });
+
+  const matchedEvent = new Promise<ChainEvent>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for generic log event.")), 500);
+    const unsubscribe = detector.subscribe((_state, event) => {
+      if (event?.txHash === txHash) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(event);
+      }
+    });
+  });
+
+  detector.start();
+
+  const event = await matchedEvent;
+
+  assert.equal(event.signal, "Log Match");
+  assert.equal(event.severity, "info");
+  assert.equal(event.address?.toLowerCase(), token);
+});
+
 test("summarizes watched targets and event severities", () => {
   const detector = new ChainDetector();
   const initialSummary = detector.getSummary();
