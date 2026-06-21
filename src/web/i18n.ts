@@ -236,7 +236,7 @@ const liquidityCopy = {
     statusDegraded: "Degraded",
   },
   zh: {
-    analyze: "分析流动池钱包",
+    analyze: "分析 LP 钱包",
     analyzing: "分析中",
     analyzeSuccess: "流动池钱包分析完成",
     analyzeError: "无法分析代币流动性。",
@@ -348,7 +348,7 @@ export function getEventCopy(locale: Locale, event: ChainEvent) {
 
   if (event.id.startsWith("demo-")) {
     return {
-      title: `演示检测心跳：${getSignalCopy(locale, event.signal)}`,
+      title: `演示检测心跳: ${getSignalCopy(locale, event.signal)}`,
       detail: "设置 BSC_RPC_URL 或 ETH_RPC_URL 后，事件流会从种子演示切换为实时链上轮询。",
     };
   }
